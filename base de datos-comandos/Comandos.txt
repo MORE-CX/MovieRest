@@ -1,0 +1,19 @@
+
+Iniciar servidor angular
+cd public/cliente
+ng serve
+
+Iniciar servidor node
+npm start
+
+Iniciar servidor mongodb
+mongod
+
+Usar mongodb
+mongo
+
+Exportar Base de Datos de mongodb
+mongoexport -d peliculas -c peliculas -o output.json
+
+Importar Base de Datos a mongodb
+mongoimport -d peliculas -c peliculas output.json 
