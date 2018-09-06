@@ -18,7 +18,7 @@ mongoose.connect(database.url); 	// conecta con la base de datos de mongodb
 
 
 app.use(cors({origin: '*'}));
-app.use(express.static(__dirname + '/public/cliente/src')); 				// establece la ubicacion de los archivos basicos
+app.use(express.static(__dirname + '/public/dist/cliente')); 				// establece la ubicacion de los archivos basicos
 app.use(morgan('dev')); 										// muestra las solicitudes por consola
 app.use(bodyParser.urlencoded({'extended':'true'})); 			// analiza application/x-www-form-urlencoded
 app.use(bodyParser.json()); 									// analiza application/json
