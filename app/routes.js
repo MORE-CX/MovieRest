@@ -1,6 +1,17 @@
 var Pelicula = require('./models/pelicula');
 var key = "67f4da3fd50b5f030400d2f3527b608e";
+var multer = require('multer')
 
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "public/dist/cliente/imagenes/portadas");
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    }
+})
+
+var upload = multer({ storage: storage })
 module.exports = function (app) {
 
     // get-> Obtiene todas la peliculas
@@ -130,10 +141,8 @@ module.exports = function (app) {
 
 
 
-
     // create una peicula y la retorna luego de eso
-    app.post('/api/peliculas/:key', function (req, res) {
-
+    app.post('/api/peliculas/:key', upload.single('portada'), function (req, res) {
         // crea una pelicula con la informacion proveniente de la solicitud AJAX de Angular
         if (req.params.key == key) {
             Pelicula.create({
@@ -158,6 +167,19 @@ module.exports = function (app) {
             res.send("Key no valida")
         }
     });
+
+
+
+    app.post('/api/subirportada/:key', upload.single('portada'), function (req, res) {
+        // crea una pelicula con la informacion proveniente de la solicitud AJAX de Angular
+        if (req.params.key == key) {
+            console.log(req.file)
+            res.json(req.file.originalname);
+        } else {
+            res.send("Key no valida")
+        }
+    });
+
 
     // delete a una pelicula
     app.delete('/api/peliculas/:key&:id', function (req, res) {
@@ -196,8 +218,7 @@ module.exports = function (app) {
     });
 
 
-
-
+    
 
 
 
