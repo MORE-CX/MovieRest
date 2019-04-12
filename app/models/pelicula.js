@@ -1,5 +1,5 @@
 var mongoose = require('mongoose');
-//Modelo de la base de datos
+//Esquema de la base de datos
 module.exports = mongoose.model('Pelicula', {
       titulo: String,
       descripcion: String,

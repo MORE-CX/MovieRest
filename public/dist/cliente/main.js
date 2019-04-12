@@ -101,6 +101,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_index_index_component__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./components/index/index.component */ "./src/app/components/index/index.component.ts");
 /* harmony import */ var _components_navbar_navbar_component__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./components/navbar/navbar.component */ "./src/app/components/navbar/navbar.component.ts");
 /* harmony import */ var _components_detalles_detalles_component__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./components/detalles/detalles.component */ "./src/app/components/detalles/detalles.component.ts");
+/* harmony import */ var angularfire2__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! angularfire2 */ "./node_modules/angularfire2/index.js");
+/* harmony import */ var angularfire2_storage__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! angularfire2/storage */ "./node_modules/angularfire2/storage/index.js");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -117,6 +119,16 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 
 
 
+
+
+var config = {
+    apiKey: "AIzaSyDG8ZLwbJepb5vAFlj7EfEliFMOQwGloBc",
+    authDomain: "muvierest.firebaseapp.com",
+    databaseURL: "https://muvierest.firebaseio.com",
+    projectId: "muvierest",
+    storageBucket: "muvierest.appspot.com",
+    messagingSenderId: "600551442706"
+};
 var AppModule = /** @class */ (function () {
     function AppModule() {
     }
@@ -133,7 +145,9 @@ var AppModule = /** @class */ (function () {
                 _angular_platform_browser__WEBPACK_IMPORTED_MODULE_0__["BrowserModule"],
                 _app_route__WEBPACK_IMPORTED_MODULE_4__["AppRoutingModule"],
                 _angular_common_http__WEBPACK_IMPORTED_MODULE_5__["HttpClientModule"],
-                _angular_forms__WEBPACK_IMPORTED_MODULE_6__["FormsModule"]
+                _angular_forms__WEBPACK_IMPORTED_MODULE_6__["FormsModule"],
+                angularfire2__WEBPACK_IMPORTED_MODULE_10__["AngularFireModule"].initializeApp(config),
+                angularfire2_storage__WEBPACK_IMPORTED_MODULE_11__["AngularFireStorageModule"]
             ],
             providers: [],
             bootstrap: [_app_component__WEBPACK_IMPORTED_MODULE_2__["AppComponent"]]
@@ -502,7 +516,7 @@ module.exports = ""
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "<div id=\"demo\" class=\"collapse col-md-12\">\n\n  <h3>Editar pelicula</h3>\n  <hr>\n  <div class=\"col-md-6\">\n    <form (submit)=\"updatePelicula($event)\" id=\"agregar\">\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"titulo\">Titulo:</label>\n        <input type=\"text\" name=\"titulo\" [(ngModel)]=\"peliAEditar.titulo\" placeholder=\"Titulo\" class=\"form-control\" value=\"{{peliAEditar.titulo}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"descripcion\">Descripcion:</label>\n        <input type=\"text\" name=\"descripcion\" [(ngModel)]=\"peliAEditar.descripcion\" placeholder=\"Descripcion\" class=\"form-control\"\n          value=\"{{peliAEditar.descripcion}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"portada\">Portada:</label>\n        <input type=\"text\" name=\"portada\" [(ngModel)]=\"peliAEditar.portada\" placeholder=\"Portada\" class=\"form-control\" value=\"{{peliAEditar.portada}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"trailer\">Trailer:</label>\n        <input type=\"text\" name=\"trailer\" [(ngModel)]=\"peliAEditar.trailer\" placeholder=\"Trailer\" class=\"form-control\" value=\"{{peliAEditar.trailer}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"estreno\">Estreno:</label>\n        <input type=\"text\" name=\"estreno\" [(ngModel)]=\"peliAEditar.estreno\" placeholder=\"Estreno\" class=\"form-control\" value=\"{{peliAEditar.estreno}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"generos\">Generos:</label>\n        <input type=\"text\" name=\"generos\" [(ngModel)]=\"peliAEditar.generos\" placeholder=\"Generos\" class=\"form-control\" value=\"{{peliAEditar.generos}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <button type=\"submit\" class=\"btn btn-primary\" style=\"margin-right:3px\">\n          Guardar Cambios\n        </button>\n        <button class=\"btn btn-danger\" id=\"cancelarEdicion\" data-toggle=\"collapse\" data-target=\"#demo\">\n          Cancelar\n        </button>\n      </div>\n    </form>\n  </div>\n\n\n\n\n  <div *ngIf=\"estado==2\" class=\"col-md-6\">\n\n    <div style=\"border:solid rgb(168, 168, 168) 1px; padding:20px\">\n      <h3>{{peliAEditar.titulo}}</h3>\n      <div style=\"text-align:center\">\n        <img src=\"{{peliAEditar.portada}}\" alt=\"Portada\" class=\"img-thumbnail col-md-offset-2 col-md-8\">\n      </div>\n      <p><b>Descripcion:</b> {{peliAEditar.descripcion}}</p>\n      <p><b>Fecha de Estreno:</b> {{peliAEditar.estreno}}</p>\n      <p><b>Genero:</b> {{peliAEditar.generos}}</p>\n      <p><b>Trailer:</b></p>\n      <iframe width=\"100%\" height=\"320\" [src]=\"transform(peliAEditar.trailer)\" frameborder=\"0\" allowfullscreen></iframe>\n    </div>\n  </div>\n</div>\n\n\n\n\n\n\n\n<div class=\"col-md-6\">\n\n\n\n\n  <div *ngIf=\"estado==1\">\n    <div style=\"border:solid rgb(168, 168, 168) 1px; padding:20px\">\n      <h3>{{titulo}}</h3>\n      <img src=\"{{portadatemp}}\" alt=\"Portada\">\n      <p><b>Descripcion:</b>{{descripcion}}</p>\n      <p><b>Fecha de Estreno:</b> {{estreno}}</p>\n      <p><b>Genero:</b> {{generos}}</p>\n      <p><b>Trailer:</b></p>\n      <iframe width=\"100%\" height=\"320\" [src]=\"transform(trailer)\" frameborder=\"0\" allowfullscreen></iframe>\n    </div>\n  </div>\n\n\n  <div>\n    <h3>Administrar Peliculas</h3>\n    <hr>\n    <table class=\"table table-striped\">\n      <thead>\n        <tr>\n          <th>Titulo</th>\n          <th>Acciones</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr *ngFor=\"let pelicula of peliculas\">\n          <th>\n            {{pelicula.titulo}}\n          </th>\n          <th>\n            <button class=\"btn btn-info\"  [routerLink]=\"['/detalles',pelicula._id]\" style=\"margin-right:3px\">Ver</button>\n            <button class=\"btn btn-info\" (click)=\"editarPelicula(pelicula)\" data-toggle=\"collapse\" data-target=\"#demo\" style=\"margin-right:3px\">Modo\n              Edicion\n            </button>\n            <button class=\"btn btn-danger\" (click)=\"deletePelicula(pelicula._id)\">Eliminar</button>\n          </th>\n\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</div>\n\n\n\n\n\n\n\n\n<div class=\"col-md-6\">\n\n\n  <h3>Agregar pelicula</h3>\n  <hr>\n\n\n  <div class=\"col-md-12\" style=\"text-align:center\">\n    <img src=\"https://image.ibb.co/edpAKe/logo_min.png\" alt=\"Agregar Pelicula\" width=\"30%\" style=\"margin:20px\">\n    <form (submit)=\"addPelicula($event)\" (click)=\"estado=1\">\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"titulo\" [(ngModel)]=\"titulo\" placeholder=\"Titulo\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"descripcion\" [(ngModel)]=\"descripcion\" placeholder=\"Descripcion\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"trailer\" [(ngModel)]=\"trailer\" placeholder=\"Trailer\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"estreno\" [(ngModel)]=\"estreno\" placeholder=\"Estreno\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"generos\" [(ngModel)]=\"generos\" placeholder=\"Generos\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n          <div style=\"position:relative;\">\n              <a class='btn btn-default form-control' style=\"color: #999999;text-align: left\" href='javascript:;'>\n                Elegir: Imagen de Portada   \n                <input type=\"file\"  name=\"portada\" [(ngModel)]=\"portada\" (change)=\"onFileChanged($event)\" accept=\"image/png, image/jpeg\" style='position:absolute;z-index:2;top:0;left:0;filter: alpha(opacity=0);-ms-filter:\"progid:DXImageTransform.Microsoft.Alpha(Opacity=0)\";opacity:0;background-color:transparent;color:transparent;' name=\"file_source\" size=\"40\" onchange='$(\"#upload-file-info\").html($(this).val());'>\n              </a>\n              &nbsp;\n              <span class='label label-info' id=\"upload-file-info\"></span>\n            </div>\n      </div>\n      <div class=\"form-group col-md-12\">\n        <button type=\"submit\" class=\"btn btn-primary\">\n          Agregar Pelicula\n        </button>\n      </div>\n    </form>\n  </div>\n</div>"
+module.exports = "<div id=\"demo\" class=\"collapse col-md-12\">\n\n  <h3 id=\"editar\">Editar pelicula</h3>\n  <hr>\n  <div class=\"col-md-6\">\n    <form (submit)=\"updatePelicula($event)\">\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"titulo\">Titulo:</label>\n        <input type=\"text\" name=\"titulo\" [(ngModel)]=\"peliAEditar.titulo\" placeholder=\"Titulo\" class=\"form-control\"\n          value=\"{{peliAEditar.titulo}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"descripcion\">Descripcion:</label>\n        <input type=\"text\" name=\"descripcion\" [(ngModel)]=\"peliAEditar.descripcion\" placeholder=\"Descripcion\" class=\"form-control\"\n          value=\"{{peliAEditar.descripcion}}\">\n      </div>\n\n\n\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n          <label for=\"trailer\">Portada:</label>\n        <div style=\"position:relative;\">\n          <a class='btn btn-default form-control' style=\"color: #999999;text-align: left\" href='javascript:;'>\n            Elegir: Imagen de Portada\n            <input type=\"file\" name=\"portada\"  accept=\".png,.jpg\" (change)=\"uploadImg($event)\"\n              accept=\"image/png, image/jpeg\" style='position:absolute;z-index:2;top:0;left:0;filter: alpha(opacity=0);-ms-filter:\"progid:DXImageTransform.Microsoft.Alpha(Opacity=0)\";opacity:0;background-color:transparent;color:transparent;'\n              name=\"file_source\" size=\"40\" onchange='$(\"#upload-file-info\").html($(this).val());'>\n          </a>\n          &nbsp;\n          <span class='label label-info' id=\"upload-file-info\"></span>\n        </div>\n      </div>\n\n\n\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"trailer\">Trailer:</label>\n        <input type=\"text\" name=\"trailer\" id=\"trailerE\" [(ngModel)]=\"peliAEditar.trailer\" (change)=\"esYoutubeUrl()\" placeholder=\"Trailer\" class=\"form-control\"\n          value=\"{{peliAEditar.trailer}}\" required>\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"estreno\">Estreno:</label>\n        <input type=\"text\" name=\"estreno\" [(ngModel)]=\"peliAEditar.estreno\" placeholder=\"Estreno\" class=\"form-control\"\n          value=\"{{peliAEditar.estreno}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <label for=\"generos\">Generos:</label>\n        <input type=\"text\" name=\"generos\" [(ngModel)]=\"peliAEditar.generos\" placeholder=\"Generos\" class=\"form-control\"\n          value=\"{{peliAEditar.generos}}\">\n      </div>\n      <div class=\"form-group col-md-offset-2 col-md-8\">\n        <button type=\"submit\" class=\"btn btn-primary\" style=\"margin-right:3px\">\n          Guardar Cambios\n        </button>\n        <button class=\"btn btn-danger\" id=\"cancelarEdicion\" data-toggle=\"collapse\" data-target=\"#demo\">\n          Cancelar\n        </button>\n      </div>\n    </form>\n  </div>\n\n\n\n  <div *ngIf=\"estado==2\" class=\"col-md-6\">\n\n    <div style=\"border:solid rgb(168, 168, 168) 1px; padding:20px\">\n      <h3>{{peliAEditar.titulo}}</h3>\n      <div style=\"text-align:center\">\n        <img src=\"{{portadatemp}}\" alt=\"Portada\" class=\"img-thumbnail col-md-offset-2 col-md-8\">\n      </div>\n      <p><b>Descripcion:</b> {{peliAEditar.descripcion}}</p>\n      <p><b>Fecha de Estreno:</b> {{peliAEditar.estreno}}</p>\n      <p><b>Genero:</b> {{peliAEditar.generos}}</p>\n      <p><b>Trailer:</b></p>\n      <iframe width=\"100%\" height=\"320\" [src]=\"transform(peliAEditar.trailer)\" frameborder=\"0\" allowfullscreen></iframe>\n    </div>\n  </div>\n</div>\n\n\n\n\n\n\n\n<div class=\"col-md-6\">\n\n\n\n\n  <div *ngIf=\"estado==1\">\n    <div style=\"border:solid rgb(168, 168, 168) 1px; padding:20px\">\n      <h3>{{titulo}}</h3>\n      <img src=\"{{portadatemp}}\" alt=\"Portada\">\n      <p><b>Descripcion:</b>{{descripcion}}</p>\n      <p><b>Fecha de Estreno:</b> {{estreno}}</p>\n      <p><b>Genero:</b> {{generos}}</p>\n      <p><b>Trailer:</b></p>\n      <iframe width=\"100%\" height=\"320\" [src]=\"transform(trailer)\" frameborder=\"0\" allowfullscreen></iframe>\n    </div>\n  </div>\n\n\n\n  <div>\n    <h3>Administrar Peliculas</h3>\n    <hr>\n    <table class=\"table table-striped\">\n      <thead>\n        <tr>\n          <th>Titulo</th>\n          <th>Acciones</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr *ngFor=\"let pelicula of peliculas\">\n          <th>\n            {{pelicula.titulo}}\n          </th>\n          <th>\n            <button class=\"btn btn-info\" [routerLink]=\"['/detalles',pelicula._id]\" style=\"margin-right:3px\">Ver</button>\n            <button class=\"btn btn-info\" (click)=\"editarPelicula(pelicula)\" data-toggle=\"collapse\" data-target=\"#demo\"\n              style=\"margin-right:3px\">Modo\n              Edicion\n            </button>\n            <button class=\"btn btn-danger\" (click)=\"deletePelicula(pelicula._id)\">Eliminar</button>\n          </th>\n\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</div>\n\n\n\n\n\n\n\n\n<div class=\"col-md-6\">\n\n\n  <h3>Agregar pelicula</h3>\n  <hr>\n\n\n  <div class=\"col-md-12\" style=\"text-align:center\">\n    <img src=\"https://image.ibb.co/edpAKe/logo_min.png\" alt=\"Agregar Pelicula\" width=\"30%\" style=\"margin:20px\">\n    <form (submit)=\"addPelicula($event)\" id=\"addF\" (click)=\"estado=1\">\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"titulo\" [(ngModel)]=\"titulo\" placeholder=\"Titulo\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"descripcion\" [(ngModel)]=\"descripcion\" placeholder=\"Descripcion\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"trailer\" id=\"trailerN\" (change)=\"esYoutubeUrl()\" [(ngModel)]=\"trailer\" required\n          placeholder=\"Trailer\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"estreno\" [(ngModel)]=\"estreno\" placeholder=\"Estreno\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <input type=\"text\" name=\"generos\" [(ngModel)]=\"generos\" placeholder=\"Generos\" class=\"form-control\">\n      </div>\n      <div class=\"form-group col-md-6\">\n        <div style=\"position:relative;\">\n          <a class='btn btn-default form-control' style=\"color: #999999;text-align: left\" href='javascript:;'>\n            Elegir: Imagen de Portada\n            <input type=\"file\" name=\"portada\" [(ngModel)]=\"portada\" accept=\".png,.jpg\" (change)=\"uploadImg($event)\"\n              accept=\"image/png, image/jpeg\" style='position:absolute;z-index:2;top:0;left:0;filter: alpha(opacity=0);-ms-filter:\"progid:DXImageTransform.Microsoft.Alpha(Opacity=0)\";opacity:0;background-color:transparent;color:transparent;'\n              name=\"file_source\" size=\"40\" onchange='$(\"#upload-file-info\").html($(this).val());'>\n          </a>\n          &nbsp;\n          <span class='label label-info' id=\"upload-file-info\"></span>\n        </div>\n      </div>\n      <div class=\"form-group col-md-12\">\n        <button type=\"submit\" class=\"btn btn-primary\">\n          Agregar Pelicula\n        </button>\n      </div>\n    </form>\n  </div>\n</div>"
 
 /***/ }),
 
@@ -519,6 +533,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
 /* harmony import */ var _services_pelicula_service__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../services/pelicula.service */ "./src/app/services/pelicula.service.ts");
 /* harmony import */ var _angular_platform_browser__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @angular/platform-browser */ "./node_modules/@angular/platform-browser/fesm5/platform-browser.js");
+/* harmony import */ var angularfire2_storage__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! angularfire2/storage */ "./node_modules/angularfire2/storage/index.js");
+/* harmony import */ var rxjs_operators__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! rxjs/operators */ "./node_modules/rxjs/_esm5/operators/index.js");
 var __decorate = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -531,11 +547,15 @@ var __metadata = (undefined && undefined.__metadata) || function (k, v) {
 
 
 
+
+
 var PeliculasComponent = /** @class */ (function () {
-    function PeliculasComponent(peliculaService, sanitizer) {
+    function PeliculasComponent(peliculaService, afStorage, sanitizer, titleService) {
         var _this = this;
         this.peliculaService = peliculaService;
+        this.afStorage = afStorage;
         this.sanitizer = sanitizer;
+        this.titleService = titleService;
         this.portadatemp = "imagenes/portadas/";
         this.peliAEditar = {
             titulo: "",
@@ -545,26 +565,18 @@ var PeliculasComponent = /** @class */ (function () {
             estreno: "",
             generos: "",
         };
+        titleService.setTitle("MR Admin Movies");
+        //Obtiene todas las peliculas
         this.peliculaService.getPeliculas().subscribe(function (pelis) {
             _this.peliculas = pelis;
             _this.estado = 0;
         });
     }
-    //Transforma la url para que pueda ser agregada al iframe del trailer
-    PeliculasComponent.prototype.transform = function (url) {
-        if (!url) {
-            return '';
-        }
-        if (url) {
-            url = url.replace('watch?v=', 'embed/');
-        }
-        return this.sanitizer.bypassSecurityTrustResourceUrl(url);
-    };
+    PeliculasComponent.prototype.ngOnInit = function () { };
     //Agrega una pelicula 
     PeliculasComponent.prototype.addPelicula = function (event) {
         var _this = this;
         event.preventDefault();
-        console.log("addpeli", this.portadatemp);
         var newPelicula = {
             titulo: this.titulo,
             descripcion: this.descripcion,
@@ -577,7 +589,8 @@ var PeliculasComponent = /** @class */ (function () {
             _this.peliculas = peli;
         });
         this.estado = 0;
-        $("#agregar").reset();
+        this.portadatemp = "imagenes/portadas/";
+        $("#addF").trigger("reset");
     };
     //Elimina una pelicula
     PeliculasComponent.prototype.deletePelicula = function (id) {
@@ -590,11 +603,6 @@ var PeliculasComponent = /** @class */ (function () {
             }
         });
     };
-    //Habilita el modo edicion
-    PeliculasComponent.prototype.editarPelicula = function (pelicula) {
-        this.estado = 2;
-        this.peliAEditar = pelicula;
-    };
     //Actualiza una pelicula
     PeliculasComponent.prototype.updatePelicula = function (event) {
         $("#cancelarEdicion").click();
@@ -603,25 +611,84 @@ var PeliculasComponent = /** @class */ (function () {
             _id: this.peliAEditar._id,
             titulo: this.peliAEditar.titulo,
             descripcion: this.peliAEditar.descripcion,
-            portada: this.peliAEditar.portada,
+            portada: this.portadatemp,
             trailer: this.peliAEditar.trailer,
             estreno: this.peliAEditar.estreno,
             generos: this.peliAEditar.generos
         };
         this.peliculaService.updatePelicula(pelicula).subscribe(function (res) {
         });
+        this.portadatemp = "imagenes/portadas/";
     };
-    PeliculasComponent.prototype.ngOnInit = function () {
+    //Habilita el modo edicion
+    PeliculasComponent.prototype.editarPelicula = function (pelicula) {
+        this.estado = 2;
+        this.peliAEditar = pelicula;
+        this.portadatemp = pelicula.portada;
     };
-    PeliculasComponent.prototype.onFileChanged = function (event) {
+    //Sube la imagen al servidor 
+    PeliculasComponent.prototype.uploadImgOffline = function (event) {
         var _this = this;
         this.selectedFile = event.target.files[0];
         var uploadData = new FormData();
         uploadData.append('portada', this.selectedFile, this.selectedFile.name);
+        this.portadatemp = "imagenes/portadas/";
         this.peliculaService.addPortada(uploadData).subscribe(function (peli) {
             _this.portadatemp = _this.portadatemp + peli;
-            console.log("onfilechange", _this.portadatemp);
         });
+    };
+    //Transforma la url para que pueda ser agregada al iframe del trailer
+    PeliculasComponent.prototype.transform = function (url) {
+        if (!url) {
+            return '';
+        }
+        if (url) {
+            url = url.replace('watch?v=', 'embed/');
+        }
+        return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    };
+    //Verifica que la url es de youtube
+    PeliculasComponent.prototype.esYoutubeUrl = function () {
+        var p = /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
+        if (this.estado == 2) {
+            if (this.peliAEditar.trailer.match(p)) {
+                $("#trailerE").css("border-color", "#cccccc");
+                $("#trailerE").attr("placeholder", "Trailer");
+                return this.peliAEditar.trailer.match(p)[1];
+            }
+            this.peliAEditar.trailer = "";
+            $("#trailerE").css("border-color", "red");
+            $("#trailerE").attr("placeholder", "Trailer: Link invalido");
+        }
+        else {
+            if (this.trailer.match(p)) {
+                $("#trailerN").css("border-color", "#cccccc");
+                $("#trailerN").attr("placeholder", "Trailer");
+                return this.trailer.match(p)[1];
+            }
+            this.trailer = "";
+            $("#trailerN").css("border-color", "red");
+            $("#trailerN").attr("placeholder", "Trailer: Link invalido");
+        }
+        return false;
+    };
+    ;
+    //Sube la imagen de la portada
+    PeliculasComponent.prototype.uploadImg = function (event) {
+        var _this = this;
+        if (this.peliculaService.domain == "https://movierest.herokuapp.com") {
+            var id = Math.random().toString(36).substring(2);
+            this.ref = this.afStorage.ref(id);
+            this.task = this.ref.put(event.target.files[0]);
+            this.task.snapshotChanges().pipe(Object(rxjs_operators__WEBPACK_IMPORTED_MODULE_4__["finalize"])(function () {
+                _this.ref.getDownloadURL().subscribe(function (url) {
+                    _this.portadatemp = url;
+                });
+            })).subscribe();
+        }
+        else {
+            this.uploadImgOffline(event);
+        }
     };
     PeliculasComponent = __decorate([
         Object(_angular_core__WEBPACK_IMPORTED_MODULE_0__["Component"])({
@@ -629,7 +696,10 @@ var PeliculasComponent = /** @class */ (function () {
             template: __webpack_require__(/*! ./peliculas.component.html */ "./src/app/components/peliculas/peliculas.component.html"),
             styles: [__webpack_require__(/*! ./peliculas.component.css */ "./src/app/components/peliculas/peliculas.component.css")]
         }),
-        __metadata("design:paramtypes", [_services_pelicula_service__WEBPACK_IMPORTED_MODULE_1__["PeliculaService"], _angular_platform_browser__WEBPACK_IMPORTED_MODULE_2__["DomSanitizer"]])
+        __metadata("design:paramtypes", [_services_pelicula_service__WEBPACK_IMPORTED_MODULE_1__["PeliculaService"],
+            angularfire2_storage__WEBPACK_IMPORTED_MODULE_3__["AngularFireStorage"],
+            _angular_platform_browser__WEBPACK_IMPORTED_MODULE_2__["DomSanitizer"],
+            _angular_platform_browser__WEBPACK_IMPORTED_MODULE_2__["Title"]])
     ], PeliculasComponent);
     return PeliculasComponent;
 }());
@@ -666,37 +736,41 @@ var __metadata = (undefined && undefined.__metadata) || function (k, v) {
 var PeliculaService = /** @class */ (function () {
     function PeliculaService(http) {
         this.http = http;
-        this.domain = "http://localhost:8080";
-        //domain: String = "https://movierest.herokuapp.com";
+        //domain: String = "http://localhost:8080";
+        this.domain = "https://movierest.herokuapp.com";
         this.key = "67f4da3fd50b5f030400d2f3527b608e";
     }
     PeliculaService.prototype.ngOnInit = function () {
     };
-    //Obtiene las peliculas de la api
+    //Obtiene todas las peliculas de la api y las retorna
     PeliculaService.prototype.getPeliculas = function () {
         return this.http.get(this.domain + "/api/peliculas/" + this.key).map(function (res) { return res; });
     };
+    //Envia el id de una pelicula y retorna su resultado
     PeliculaService.prototype.getUnaPelicula = function (id) {
         return this.http.get(this.domain + "/api/peliculas/detalles/" + this.key + "&" + id).map(function (res) { return res; });
     };
+    //Envia el genero a la api y retorna los resultados
     PeliculaService.prototype.getPeliculaSegunGenero = function (genero) {
         return this.http.get(this.domain + "/api/peliculas/genero/" + this.key + "&" + genero).map(function (res) { return res; });
     };
+    //Envia el titulo a la api y retorna los resultados
     PeliculaService.prototype.getBuscarPelicula = function (titulo) {
         return this.http.get(this.domain + "/api/peliculas/buscar/" + this.key + "&" + titulo).map(function (res) { return res; });
     };
-    //Agrega una pelicula en la api
+    //Agrega una pelicula a la base a traves de la api
     PeliculaService.prototype.addPeliculas = function (pelicula) {
         return this.http.post(this.domain + "/api/peliculas/" + this.key, pelicula).map(function (res) { return res; });
     };
+    //Agrega una portada de pelicula y retorna su localizacion
     PeliculaService.prototype.addPortada = function (portada) {
         return this.http.post(this.domain + "/api/subirportada/" + this.key, portada).map(function (res) { return res; });
     };
-    //Actualiza una pelicula
+    //Actualiza una pelicula y la retorna
     PeliculaService.prototype.updatePelicula = function (nuevaPelicula) {
-        return this.http.put(this.domain + "/api/peliculas/" + this.key + "&" + nuevaPelicula._id, nuevaPelicula).map(function (res) { return res; });
+        return this.http.put(this.domain + "/api/peliculas/" + this.key, nuevaPelicula).map(function (res) { return res; });
     };
-    //Elimina una pelicula
+    //Elimina una pelicula y retorna las restantes
     PeliculaService.prototype.deletePelicula = function (id) {
         return this.http.delete(this.domain + "/api/peliculas/" + this.key + "&" + id).map(function (res) { return res; });
     };
@@ -773,7 +847,7 @@ Object(_angular_platform_browser_dynamic__WEBPACK_IMPORTED_MODULE_1__["platformB
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! C:\xampp\htdocs\cliente\src\main.ts */"./src/main.ts");
+module.exports = __webpack_require__(/*! /home/mcx/Trabajo/Proyectos/MovieRest/public/cliente/src/main.ts */"./src/main.ts");
 
 
 /***/ })

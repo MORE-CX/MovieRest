@@ -2,16 +2,16 @@
 
 
 
-var express  = require('express');
-var app      = express(); 								// create our app w/ express
+var express  = require('express');                      // crea la app express
+var app      = express(); 								
 var mongoose = require('mongoose'); 					// mongoose para mongodb
 var port  	 = process.env.PORT || 8080; 				// definir un puerto predeterminado o el 8080
 var database = require('./config/database'); 			// carga la configuracion de la base de datos
 var cors = require('cors');
 
-var morgan = require('morgan'); 		// muestra las solicitudes de registro por consola (express4)
+var morgan = require('morgan'); 		// Middleware de registro de solicitudes HTTP.
 var bodyParser = require('body-parser'); 	// extrae la informacion HTML enviada por POST (express4)
-var methodOverride = require('method-override'); //  DELETE and PUT (express4)
+var methodOverride = require('method-override'); //  Le permite usar verbos HTTP como PUT o DELETE en lugares donde el cliente no lo admite.
 
 // configuracion ===============================================================
 mongoose.connect(database.url); 	// conecta con la base de datos de mongodb

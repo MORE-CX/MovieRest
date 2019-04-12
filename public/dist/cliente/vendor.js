@@ -65988,6 +65988,7944 @@ var VERSION = new _angular_core__WEBPACK_IMPORTED_MODULE_1__["Version"]('6.1.6')
 
 /***/ }),
 
+/***/ "./node_modules/@firebase/app/dist/index.cjs.js":
+/*!******************************************************!*\
+  !*** ./node_modules/@firebase/app/dist/index.cjs.js ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var util = __webpack_require__(/*! @firebase/util */ "./node_modules/@firebase/util/dist/index.cjs.js");
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var contains = function (obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+};
+var DEFAULT_ENTRY_NAME = '[DEFAULT]';
+// An array to capture listeners before the true auth functions
+// exist
+var tokenListeners = [];
+/**
+ * Global context object for a collection of services using
+ * a shared authentication state.
+ */
+var FirebaseAppImpl = /** @class */ (function () {
+    function FirebaseAppImpl(options, config, firebase_) {
+        this.firebase_ = firebase_;
+        this.isDeleted_ = false;
+        this.services_ = {};
+        this.name_ = config.name;
+        this._automaticDataCollectionEnabled =
+            config.automaticDataCollectionEnabled || false;
+        this.options_ = util.deepCopy(options);
+        this.INTERNAL = {
+            getUid: function () { return null; },
+            getToken: function () { return Promise.resolve(null); },
+            addAuthTokenListener: function (callback) {
+                tokenListeners.push(callback);
+                // Make sure callback is called, asynchronously, in the absence of the auth module
+                setTimeout(function () { return callback(null); }, 0);
+            },
+            removeAuthTokenListener: function (callback) {
+                tokenListeners = tokenListeners.filter(function (listener) { return listener !== callback; });
+            }
+        };
+    }
+    Object.defineProperty(FirebaseAppImpl.prototype, "automaticDataCollectionEnabled", {
+        get: function () {
+            this.checkDestroyed_();
+            return this._automaticDataCollectionEnabled;
+        },
+        set: function (val) {
+            this.checkDestroyed_();
+            this._automaticDataCollectionEnabled = val;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(FirebaseAppImpl.prototype, "name", {
+        get: function () {
+            this.checkDestroyed_();
+            return this.name_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(FirebaseAppImpl.prototype, "options", {
+        get: function () {
+            this.checkDestroyed_();
+            return this.options_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    FirebaseAppImpl.prototype.delete = function () {
+        var _this = this;
+        return new Promise(function (resolve) {
+            _this.checkDestroyed_();
+            resolve();
+        })
+            .then(function () {
+            _this.firebase_.INTERNAL.removeApp(_this.name_);
+            var services = [];
+            Object.keys(_this.services_).forEach(function (serviceKey) {
+                Object.keys(_this.services_[serviceKey]).forEach(function (instanceKey) {
+                    services.push(_this.services_[serviceKey][instanceKey]);
+                });
+            });
+            return Promise.all(services.map(function (service) {
+                return service.INTERNAL.delete();
+            }));
+        })
+            .then(function () {
+            _this.isDeleted_ = true;
+            _this.services_ = {};
+        });
+    };
+    /**
+     * Return a service instance associated with this app (creating it
+     * on demand), identified by the passed instanceIdentifier.
+     *
+     * NOTE: Currently storage is the only one that is leveraging this
+     * functionality. They invoke it by calling:
+     *
+     * ```javascript
+     * firebase.app().storage('STORAGE BUCKET ID')
+     * ```
+     *
+     * The service name is passed to this already
+     * @internal
+     */
+    FirebaseAppImpl.prototype._getService = function (name, instanceIdentifier) {
+        if (instanceIdentifier === void 0) { instanceIdentifier = DEFAULT_ENTRY_NAME; }
+        this.checkDestroyed_();
+        if (!this.services_[name]) {
+            this.services_[name] = {};
+        }
+        if (!this.services_[name][instanceIdentifier]) {
+            /**
+             * If a custom instance has been defined (i.e. not '[DEFAULT]')
+             * then we will pass that instance on, otherwise we pass `null`
+             */
+            var instanceSpecifier = instanceIdentifier !== DEFAULT_ENTRY_NAME
+                ? instanceIdentifier
+                : undefined;
+            var service = this.firebase_.INTERNAL.factories[name](this, this.extendApp.bind(this), instanceSpecifier);
+            this.services_[name][instanceIdentifier] = service;
+        }
+        return this.services_[name][instanceIdentifier];
+    };
+    /**
+     * Callback function used to extend an App instance at the time
+     * of service instance creation.
+     */
+    FirebaseAppImpl.prototype.extendApp = function (props) {
+        var _this = this;
+        // Copy the object onto the FirebaseAppImpl prototype
+        util.deepExtend(this, props);
+        /**
+         * If the app has overwritten the addAuthTokenListener stub, forward
+         * the active token listeners on to the true fxn.
+         *
+         * TODO: This function is required due to our current module
+         * structure. Once we are able to rely strictly upon a single module
+         * implementation, this code should be refactored and Auth should
+         * provide these stubs and the upgrade logic
+         */
+        if (props.INTERNAL && props.INTERNAL.addAuthTokenListener) {
+            tokenListeners.forEach(function (listener) {
+                _this.INTERNAL.addAuthTokenListener(listener);
+            });
+            tokenListeners = [];
+        }
+    };
+    /**
+     * This function will throw an Error if the App has already been deleted -
+     * use before performing API actions on the App.
+     */
+    FirebaseAppImpl.prototype.checkDestroyed_ = function () {
+        if (this.isDeleted_) {
+            error('app-deleted', { name: this.name_ });
+        }
+    };
+    return FirebaseAppImpl;
+}());
+// Prevent dead-code elimination of these methods w/o invalid property
+// copying.
+(FirebaseAppImpl.prototype.name && FirebaseAppImpl.prototype.options) ||
+    FirebaseAppImpl.prototype.delete ||
+    console.log('dc');
+/**
+ * Return a firebase namespace object.
+ *
+ * In production, this will be called exactly once and the result
+ * assigned to the 'firebase' global.  It may be called multiple times
+ * in unit tests.
+ */
+function createFirebaseNamespace() {
+    var apps_ = {};
+    var factories = {};
+    var appHooks = {};
+    // A namespace is a plain JavaScript Object.
+    var namespace = {
+        // Hack to prevent Babel from modifying the object returned
+        // as the firebase namespace.
+        __esModule: true,
+        initializeApp: initializeApp,
+        app: app,
+        apps: null,
+        Promise: Promise,
+        SDK_VERSION: '5.0.4',
+        INTERNAL: {
+            registerService: registerService,
+            createFirebaseNamespace: createFirebaseNamespace,
+            extendNamespace: extendNamespace,
+            createSubscribe: util.createSubscribe,
+            ErrorFactory: util.ErrorFactory,
+            removeApp: removeApp,
+            factories: factories,
+            useAsService: useAsService,
+            Promise: Promise,
+            deepExtend: util.deepExtend
+        }
+    };
+    // Inject a circular default export to allow Babel users who were previously
+    // using:
+    //
+    //   import firebase from 'firebase';
+    //   which becomes: var firebase = require('firebase').default;
+    //
+    // instead of
+    //
+    //   import * as firebase from 'firebase';
+    //   which becomes: var firebase = require('firebase');
+    util.patchProperty(namespace, 'default', namespace);
+    // firebase.apps is a read-only getter.
+    Object.defineProperty(namespace, 'apps', {
+        get: getApps
+    });
+    /**
+     * Called by App.delete() - but before any services associated with the App
+     * are deleted.
+     */
+    function removeApp(name) {
+        var app = apps_[name];
+        callAppHooks(app, 'delete');
+        delete apps_[name];
+    }
+    /**
+     * Get the App object for a given name (or DEFAULT).
+     */
+    function app(name) {
+        name = name || DEFAULT_ENTRY_NAME;
+        if (!contains(apps_, name)) {
+            error('no-app', { name: name });
+        }
+        return apps_[name];
+    }
+    util.patchProperty(app, 'App', FirebaseAppImpl);
+    function initializeApp(options, rawConfig) {
+        if (rawConfig === void 0) { rawConfig = {}; }
+        if (typeof rawConfig !== 'object' || rawConfig === null) {
+            var name_1 = rawConfig;
+            rawConfig = { name: name_1 };
+        }
+        var config = rawConfig;
+        if (config.name === undefined) {
+            config.name = DEFAULT_ENTRY_NAME;
+        }
+        var name = config.name;
+        if (typeof name !== 'string' || !name) {
+            error('bad-app-name', { name: name + '' });
+        }
+        if (contains(apps_, name)) {
+            error('duplicate-app', { name: name });
+        }
+        var app = new FirebaseAppImpl(options, config, namespace);
+        apps_[name] = app;
+        callAppHooks(app, 'create');
+        return app;
+    }
+    /*
+     * Return an array of all the non-deleted FirebaseApps.
+     */
+    function getApps() {
+        // Make a copy so caller cannot mutate the apps list.
+        return Object.keys(apps_).map(function (name) { return apps_[name]; });
+    }
+    /*
+     * Register a Firebase Service.
+     *
+     * firebase.INTERNAL.registerService()
+     *
+     * TODO: Implement serviceProperties.
+     */
+    function registerService(name, createService, serviceProperties, appHook, allowMultipleInstances) {
+        // Cannot re-register a service that already exists
+        if (factories[name]) {
+            error('duplicate-service', { name: name });
+        }
+        // Capture the service factory for later service instantiation
+        factories[name] = createService;
+        // Capture the appHook, if passed
+        if (appHook) {
+            appHooks[name] = appHook;
+            // Run the **new** app hook on all existing apps
+            getApps().forEach(function (app) {
+                appHook('create', app);
+            });
+        }
+        // The Service namespace is an accessor function ...
+        var serviceNamespace = function (appArg) {
+            if (appArg === void 0) { appArg = app(); }
+            if (typeof appArg[name] !== 'function') {
+                // Invalid argument.
+                // This happens in the following case: firebase.storage('gs:/')
+                error('invalid-app-argument', { name: name });
+            }
+            // Forward service instance lookup to the FirebaseApp.
+            return appArg[name]();
+        };
+        // ... and a container for service-level properties.
+        if (serviceProperties !== undefined) {
+            util.deepExtend(serviceNamespace, serviceProperties);
+        }
+        // Monkey-patch the serviceNamespace onto the firebase namespace
+        namespace[name] = serviceNamespace;
+        // Patch the FirebaseAppImpl prototype
+        FirebaseAppImpl.prototype[name] = function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            var serviceFxn = this._getService.bind(this, name);
+            return serviceFxn.apply(this, allowMultipleInstances ? args : []);
+        };
+        return serviceNamespace;
+    }
+    /**
+     * Patch the top-level firebase namespace with additional properties.
+     *
+     * firebase.INTERNAL.extendNamespace()
+     */
+    function extendNamespace(props) {
+        util.deepExtend(namespace, props);
+    }
+    function callAppHooks(app, eventName) {
+        Object.keys(factories).forEach(function (serviceName) {
+            // Ignore virtual services
+            var factoryName = useAsService(app, serviceName);
+            if (factoryName === null) {
+                return;
+            }
+            if (appHooks[factoryName]) {
+                appHooks[factoryName](eventName, app);
+            }
+        });
+    }
+    // Map the requested service to a registered service name
+    // (used to map auth to serverAuth service when needed).
+    function useAsService(app, name) {
+        if (name === 'serverAuth') {
+            return null;
+        }
+        var useService = name;
+        var options = app.options;
+        return useService;
+    }
+    return namespace;
+}
+function error(code, args) {
+    throw appErrors.create(code, args);
+}
+// TypeScript does not support non-string indexes!
+// let errors: {[code: AppError: string} = {
+var errors = {
+    'no-app': "No Firebase App '{$name}' has been created - " +
+        'call Firebase App.initializeApp()',
+    'bad-app-name': "Illegal App name: '{$name}",
+    'duplicate-app': "Firebase App named '{$name}' already exists",
+    'app-deleted': "Firebase App named '{$name}' already deleted",
+    'duplicate-service': "Firebase service named '{$name}' already registered",
+    'sa-not-supported': 'Initializing the Firebase SDK with a service ' +
+        'account is only allowed in a Node.js environment. On client ' +
+        'devices, you should instead initialize the SDK with an api key and ' +
+        'auth domain',
+    'invalid-app-argument': 'firebase.{$name}() takes either no argument or a ' +
+        'Firebase App instance.'
+};
+var appErrors = new util.ErrorFactory('app', 'Firebase', errors);
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var firebase = createFirebaseNamespace();
+
+exports.firebase = firebase;
+exports.default = firebase;
+
+
+/***/ }),
+
+/***/ "./node_modules/@firebase/polyfill/dist/index.esm.js":
+/*!***********************************************************!*\
+  !*** ./node_modules/@firebase/polyfill/dist/index.esm.js ***!
+  \***********************************************************/
+/*! no exports provided */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var whatwg_fetch__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! whatwg-fetch */ "./node_modules/whatwg-fetch/fetch.js");
+/* harmony import */ var whatwg_fetch__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(whatwg_fetch__WEBPACK_IMPORTED_MODULE_0__);
+
+
+// Store setTimeout reference so promise-polyfill will be unaffected by
+// other code modifying setTimeout (like sinon.useFakeTimers())
+var setTimeoutFunc = setTimeout;
+
+function noop() {}
+
+// Polyfill for Function.prototype.bind
+function bind(fn, thisArg) {
+  return function() {
+    fn.apply(thisArg, arguments);
+  };
+}
+
+function Promise(fn) {
+  if (!(this instanceof Promise))
+    throw new TypeError('Promises must be constructed via new');
+  if (typeof fn !== 'function') throw new TypeError('not a function');
+  this._state = 0;
+  this._handled = false;
+  this._value = undefined;
+  this._deferreds = [];
+
+  doResolve(fn, this);
+}
+
+function handle(self, deferred) {
+  while (self._state === 3) {
+    self = self._value;
+  }
+  if (self._state === 0) {
+    self._deferreds.push(deferred);
+    return;
+  }
+  self._handled = true;
+  Promise._immediateFn(function() {
+    var cb = self._state === 1 ? deferred.onFulfilled : deferred.onRejected;
+    if (cb === null) {
+      (self._state === 1 ? resolve : reject)(deferred.promise, self._value);
+      return;
+    }
+    var ret;
+    try {
+      ret = cb(self._value);
+    } catch (e) {
+      reject(deferred.promise, e);
+      return;
+    }
+    resolve(deferred.promise, ret);
+  });
+}
+
+function resolve(self, newValue) {
+  try {
+    // Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
+    if (newValue === self)
+      throw new TypeError('A promise cannot be resolved with itself.');
+    if (
+      newValue &&
+      (typeof newValue === 'object' || typeof newValue === 'function')
+    ) {
+      var then = newValue.then;
+      if (newValue instanceof Promise) {
+        self._state = 3;
+        self._value = newValue;
+        finale(self);
+        return;
+      } else if (typeof then === 'function') {
+        doResolve(bind(then, newValue), self);
+        return;
+      }
+    }
+    self._state = 1;
+    self._value = newValue;
+    finale(self);
+  } catch (e) {
+    reject(self, e);
+  }
+}
+
+function reject(self, newValue) {
+  self._state = 2;
+  self._value = newValue;
+  finale(self);
+}
+
+function finale(self) {
+  if (self._state === 2 && self._deferreds.length === 0) {
+    Promise._immediateFn(function() {
+      if (!self._handled) {
+        Promise._unhandledRejectionFn(self._value);
+      }
+    });
+  }
+
+  for (var i = 0, len = self._deferreds.length; i < len; i++) {
+    handle(self, self._deferreds[i]);
+  }
+  self._deferreds = null;
+}
+
+function Handler(onFulfilled, onRejected, promise) {
+  this.onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : null;
+  this.onRejected = typeof onRejected === 'function' ? onRejected : null;
+  this.promise = promise;
+}
+
+/**
+ * Take a potentially misbehaving resolver function and make sure
+ * onFulfilled and onRejected are only called once.
+ *
+ * Makes no guarantees about asynchrony.
+ */
+function doResolve(fn, self) {
+  var done = false;
+  try {
+    fn(
+      function(value) {
+        if (done) return;
+        done = true;
+        resolve(self, value);
+      },
+      function(reason) {
+        if (done) return;
+        done = true;
+        reject(self, reason);
+      }
+    );
+  } catch (ex) {
+    if (done) return;
+    done = true;
+    reject(self, ex);
+  }
+}
+
+Promise.prototype['catch'] = function(onRejected) {
+  return this.then(null, onRejected);
+};
+
+Promise.prototype.then = function(onFulfilled, onRejected) {
+  var prom = new this.constructor(noop);
+
+  handle(this, new Handler(onFulfilled, onRejected, prom));
+  return prom;
+};
+
+Promise.prototype['finally'] = function(callback) {
+  var constructor = this.constructor;
+  return this.then(
+    function(value) {
+      return constructor.resolve(callback()).then(function() {
+        return value;
+      });
+    },
+    function(reason) {
+      return constructor.resolve(callback()).then(function() {
+        return constructor.reject(reason);
+      });
+    }
+  );
+};
+
+Promise.all = function(arr) {
+  return new Promise(function(resolve, reject) {
+    if (!arr || typeof arr.length === 'undefined')
+      throw new TypeError('Promise.all accepts an array');
+    var args = Array.prototype.slice.call(arr);
+    if (args.length === 0) return resolve([]);
+    var remaining = args.length;
+
+    function res(i, val) {
+      try {
+        if (val && (typeof val === 'object' || typeof val === 'function')) {
+          var then = val.then;
+          if (typeof then === 'function') {
+            then.call(
+              val,
+              function(val) {
+                res(i, val);
+              },
+              reject
+            );
+            return;
+          }
+        }
+        args[i] = val;
+        if (--remaining === 0) {
+          resolve(args);
+        }
+      } catch (ex) {
+        reject(ex);
+      }
+    }
+
+    for (var i = 0; i < args.length; i++) {
+      res(i, args[i]);
+    }
+  });
+};
+
+Promise.resolve = function(value) {
+  if (value && typeof value === 'object' && value.constructor === Promise) {
+    return value;
+  }
+
+  return new Promise(function(resolve) {
+    resolve(value);
+  });
+};
+
+Promise.reject = function(value) {
+  return new Promise(function(resolve, reject) {
+    reject(value);
+  });
+};
+
+Promise.race = function(values) {
+  return new Promise(function(resolve, reject) {
+    for (var i = 0, len = values.length; i < len; i++) {
+      values[i].then(resolve, reject);
+    }
+  });
+};
+
+// Use polyfill for setImmediate for performance gains
+Promise._immediateFn =
+  (typeof setImmediate === 'function' &&
+    function(fn) {
+      setImmediate(fn);
+    }) ||
+  function(fn) {
+    setTimeoutFunc(fn, 0);
+  };
+
+Promise._unhandledRejectionFn = function _unhandledRejectionFn(err) {
+  if (typeof console !== 'undefined' && console) {
+    console.warn('Possible Unhandled Promise Rejection:', err); // eslint-disable-line no-console
+  }
+};
+
+var globalNS = (function() {
+  // the only reliable means to get the global object is
+  // `Function('return this')()`
+  // However, this causes CSP violations in Chrome apps.
+  if (typeof self !== 'undefined') {
+    return self;
+  }
+  if (typeof window !== 'undefined') {
+    return window;
+  }
+  if (typeof global !== 'undefined') {
+    return global;
+  }
+  throw new Error('unable to locate global object');
+})();
+
+if (!globalNS.Promise) {
+  globalNS.Promise = Promise;
+}
+
+function createCommonjsModule(fn, module) {
+	return module = { exports: {} }, fn(module, module.exports), module.exports;
+}
+
+var _global = createCommonjsModule(function (module) {
+// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
+var global = module.exports = typeof window != 'undefined' && window.Math == Math
+  ? window : typeof self != 'undefined' && self.Math == Math ? self
+  // eslint-disable-next-line no-new-func
+  : Function('return this')();
+if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
+});
+
+var _core = createCommonjsModule(function (module) {
+var core = module.exports = { version: '2.5.5' };
+if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
+});
+var _core_1 = _core.version;
+
+var _isObject = function (it) {
+  return typeof it === 'object' ? it !== null : typeof it === 'function';
+};
+
+var _anObject = function (it) {
+  if (!_isObject(it)) throw TypeError(it + ' is not an object!');
+  return it;
+};
+
+var _fails = function (exec) {
+  try {
+    return !!exec();
+  } catch (e) {
+    return true;
+  }
+};
+
+// Thank's IE8 for his funny defineProperty
+var _descriptors = !_fails(function () {
+  return Object.defineProperty({}, 'a', { get: function () { return 7; } }).a != 7;
+});
+
+var document = _global.document;
+// typeof document.createElement is 'object' in old IE
+var is = _isObject(document) && _isObject(document.createElement);
+var _domCreate = function (it) {
+  return is ? document.createElement(it) : {};
+};
+
+var _ie8DomDefine = !_descriptors && !_fails(function () {
+  return Object.defineProperty(_domCreate('div'), 'a', { get: function () { return 7; } }).a != 7;
+});
+
+// 7.1.1 ToPrimitive(input [, PreferredType])
+
+// instead of the ES6 spec version, we didn't implement @@toPrimitive case
+// and the second argument - flag - preferred type is a string
+var _toPrimitive = function (it, S) {
+  if (!_isObject(it)) return it;
+  var fn, val;
+  if (S && typeof (fn = it.toString) == 'function' && !_isObject(val = fn.call(it))) return val;
+  if (typeof (fn = it.valueOf) == 'function' && !_isObject(val = fn.call(it))) return val;
+  if (!S && typeof (fn = it.toString) == 'function' && !_isObject(val = fn.call(it))) return val;
+  throw TypeError("Can't convert object to primitive value");
+};
+
+var dP = Object.defineProperty;
+
+var f = _descriptors ? Object.defineProperty : function defineProperty(O, P, Attributes) {
+  _anObject(O);
+  P = _toPrimitive(P, true);
+  _anObject(Attributes);
+  if (_ie8DomDefine) try {
+    return dP(O, P, Attributes);
+  } catch (e) { /* empty */ }
+  if ('get' in Attributes || 'set' in Attributes) throw TypeError('Accessors not supported!');
+  if ('value' in Attributes) O[P] = Attributes.value;
+  return O;
+};
+
+var _objectDp = {
+	f: f
+};
+
+var _propertyDesc = function (bitmap, value) {
+  return {
+    enumerable: !(bitmap & 1),
+    configurable: !(bitmap & 2),
+    writable: !(bitmap & 4),
+    value: value
+  };
+};
+
+var _hide = _descriptors ? function (object, key, value) {
+  return _objectDp.f(object, key, _propertyDesc(1, value));
+} : function (object, key, value) {
+  object[key] = value;
+  return object;
+};
+
+var hasOwnProperty = {}.hasOwnProperty;
+var _has = function (it, key) {
+  return hasOwnProperty.call(it, key);
+};
+
+var id = 0;
+var px = Math.random();
+var _uid = function (key) {
+  return 'Symbol('.concat(key === undefined ? '' : key, ')_', (++id + px).toString(36));
+};
+
+var _redefine = createCommonjsModule(function (module) {
+var SRC = _uid('src');
+var TO_STRING = 'toString';
+var $toString = Function[TO_STRING];
+var TPL = ('' + $toString).split(TO_STRING);
+
+_core.inspectSource = function (it) {
+  return $toString.call(it);
+};
+
+(module.exports = function (O, key, val, safe) {
+  var isFunction = typeof val == 'function';
+  if (isFunction) _has(val, 'name') || _hide(val, 'name', key);
+  if (O[key] === val) return;
+  if (isFunction) _has(val, SRC) || _hide(val, SRC, O[key] ? '' + O[key] : TPL.join(String(key)));
+  if (O === _global) {
+    O[key] = val;
+  } else if (!safe) {
+    delete O[key];
+    _hide(O, key, val);
+  } else if (O[key]) {
+    O[key] = val;
+  } else {
+    _hide(O, key, val);
+  }
+// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
+})(Function.prototype, TO_STRING, function toString() {
+  return typeof this == 'function' && this[SRC] || $toString.call(this);
+});
+});
+
+var _aFunction = function (it) {
+  if (typeof it != 'function') throw TypeError(it + ' is not a function!');
+  return it;
+};
+
+// optional / simple context binding
+
+var _ctx = function (fn, that, length) {
+  _aFunction(fn);
+  if (that === undefined) return fn;
+  switch (length) {
+    case 1: return function (a) {
+      return fn.call(that, a);
+    };
+    case 2: return function (a, b) {
+      return fn.call(that, a, b);
+    };
+    case 3: return function (a, b, c) {
+      return fn.call(that, a, b, c);
+    };
+  }
+  return function (/* ...args */) {
+    return fn.apply(that, arguments);
+  };
+};
+
+var PROTOTYPE = 'prototype';
+
+var $export = function (type, name, source) {
+  var IS_FORCED = type & $export.F;
+  var IS_GLOBAL = type & $export.G;
+  var IS_STATIC = type & $export.S;
+  var IS_PROTO = type & $export.P;
+  var IS_BIND = type & $export.B;
+  var target = IS_GLOBAL ? _global : IS_STATIC ? _global[name] || (_global[name] = {}) : (_global[name] || {})[PROTOTYPE];
+  var exports = IS_GLOBAL ? _core : _core[name] || (_core[name] = {});
+  var expProto = exports[PROTOTYPE] || (exports[PROTOTYPE] = {});
+  var key, own, out, exp;
+  if (IS_GLOBAL) source = name;
+  for (key in source) {
+    // contains in native
+    own = !IS_FORCED && target && target[key] !== undefined;
+    // export native or passed
+    out = (own ? target : source)[key];
+    // bind timers to global for call from export context
+    exp = IS_BIND && own ? _ctx(out, _global) : IS_PROTO && typeof out == 'function' ? _ctx(Function.call, out) : out;
+    // extend global
+    if (target) _redefine(target, key, out, type & $export.U);
+    // export
+    if (exports[key] != out) _hide(exports, key, exp);
+    if (IS_PROTO && expProto[key] != out) expProto[key] = out;
+  }
+};
+_global.core = _core;
+// type bitmap
+$export.F = 1;   // forced
+$export.G = 2;   // global
+$export.S = 4;   // static
+$export.P = 8;   // proto
+$export.B = 16;  // bind
+$export.W = 32;  // wrap
+$export.U = 64;  // safe
+$export.R = 128; // real proto method for `library`
+var _export = $export;
+
+var toString = {}.toString;
+
+var _cof = function (it) {
+  return toString.call(it).slice(8, -1);
+};
+
+// fallback for non-array-like ES3 and non-enumerable old V8 strings
+
+// eslint-disable-next-line no-prototype-builtins
+var _iobject = Object('z').propertyIsEnumerable(0) ? Object : function (it) {
+  return _cof(it) == 'String' ? it.split('') : Object(it);
+};
+
+// 7.2.1 RequireObjectCoercible(argument)
+var _defined = function (it) {
+  if (it == undefined) throw TypeError("Can't call method on  " + it);
+  return it;
+};
+
+// 7.1.13 ToObject(argument)
+
+var _toObject = function (it) {
+  return Object(_defined(it));
+};
+
+// 7.1.4 ToInteger
+var ceil = Math.ceil;
+var floor = Math.floor;
+var _toInteger = function (it) {
+  return isNaN(it = +it) ? 0 : (it > 0 ? floor : ceil)(it);
+};
+
+// 7.1.15 ToLength
+
+var min = Math.min;
+var _toLength = function (it) {
+  return it > 0 ? min(_toInteger(it), 0x1fffffffffffff) : 0; // pow(2, 53) - 1 == 9007199254740991
+};
+
+// 7.2.2 IsArray(argument)
+
+var _isArray = Array.isArray || function isArray(arg) {
+  return _cof(arg) == 'Array';
+};
+
+var SHARED = '__core-js_shared__';
+var store = _global[SHARED] || (_global[SHARED] = {});
+var _shared = function (key) {
+  return store[key] || (store[key] = {});
+};
+
+var _wks = createCommonjsModule(function (module) {
+var store = _shared('wks');
+
+var Symbol = _global.Symbol;
+var USE_SYMBOL = typeof Symbol == 'function';
+
+var $exports = module.exports = function (name) {
+  return store[name] || (store[name] =
+    USE_SYMBOL && Symbol[name] || (USE_SYMBOL ? Symbol : _uid)('Symbol.' + name));
+};
+
+$exports.store = store;
+});
+
+var SPECIES = _wks('species');
+
+var _arraySpeciesConstructor = function (original) {
+  var C;
+  if (_isArray(original)) {
+    C = original.constructor;
+    // cross-realm fallback
+    if (typeof C == 'function' && (C === Array || _isArray(C.prototype))) C = undefined;
+    if (_isObject(C)) {
+      C = C[SPECIES];
+      if (C === null) C = undefined;
+    }
+  } return C === undefined ? Array : C;
+};
+
+// 9.4.2.3 ArraySpeciesCreate(originalArray, length)
+
+
+var _arraySpeciesCreate = function (original, length) {
+  return new (_arraySpeciesConstructor(original))(length);
+};
+
+// 0 -> Array#forEach
+// 1 -> Array#map
+// 2 -> Array#filter
+// 3 -> Array#some
+// 4 -> Array#every
+// 5 -> Array#find
+// 6 -> Array#findIndex
+
+
+
+
+
+var _arrayMethods = function (TYPE, $create) {
+  var IS_MAP = TYPE == 1;
+  var IS_FILTER = TYPE == 2;
+  var IS_SOME = TYPE == 3;
+  var IS_EVERY = TYPE == 4;
+  var IS_FIND_INDEX = TYPE == 6;
+  var NO_HOLES = TYPE == 5 || IS_FIND_INDEX;
+  var create = $create || _arraySpeciesCreate;
+  return function ($this, callbackfn, that) {
+    var O = _toObject($this);
+    var self = _iobject(O);
+    var f = _ctx(callbackfn, that, 3);
+    var length = _toLength(self.length);
+    var index = 0;
+    var result = IS_MAP ? create($this, length) : IS_FILTER ? create($this, 0) : undefined;
+    var val, res;
+    for (;length > index; index++) if (NO_HOLES || index in self) {
+      val = self[index];
+      res = f(val, index, O);
+      if (TYPE) {
+        if (IS_MAP) result[index] = res;   // map
+        else if (res) switch (TYPE) {
+          case 3: return true;             // some
+          case 5: return val;              // find
+          case 6: return index;            // findIndex
+          case 2: result.push(val);        // filter
+        } else if (IS_EVERY) return false; // every
+      }
+    }
+    return IS_FIND_INDEX ? -1 : IS_SOME || IS_EVERY ? IS_EVERY : result;
+  };
+};
+
+// 22.1.3.31 Array.prototype[@@unscopables]
+var UNSCOPABLES = _wks('unscopables');
+var ArrayProto = Array.prototype;
+if (ArrayProto[UNSCOPABLES] == undefined) _hide(ArrayProto, UNSCOPABLES, {});
+var _addToUnscopables = function (key) {
+  ArrayProto[UNSCOPABLES][key] = true;
+};
+
+// 22.1.3.8 Array.prototype.find(predicate, thisArg = undefined)
+
+var $find = _arrayMethods(5);
+var KEY = 'find';
+var forced = true;
+// Shouldn't skip holes
+if (KEY in []) Array(1)[KEY](function () { forced = false; });
+_export(_export.P + _export.F * forced, 'Array', {
+  find: function find(callbackfn /* , that = undefined */) {
+    return $find(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+  }
+});
+_addToUnscopables(KEY);
+
+var find = _core.Array.find;
+
+// 22.1.3.9 Array.prototype.findIndex(predicate, thisArg = undefined)
+
+var $find$1 = _arrayMethods(6);
+var KEY$1 = 'findIndex';
+var forced$1 = true;
+// Shouldn't skip holes
+if (KEY$1 in []) Array(1)[KEY$1](function () { forced$1 = false; });
+_export(_export.P + _export.F * forced$1, 'Array', {
+  findIndex: function findIndex(callbackfn /* , that = undefined */) {
+    return $find$1(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+  }
+});
+_addToUnscopables(KEY$1);
+
+var findIndex = _core.Array.findIndex;
+
+// to indexed object, toObject with fallback for non-array-like ES3 strings
+
+
+var _toIobject = function (it) {
+  return _iobject(_defined(it));
+};
+
+var max = Math.max;
+var min$1 = Math.min;
+var _toAbsoluteIndex = function (index, length) {
+  index = _toInteger(index);
+  return index < 0 ? max(index + length, 0) : min$1(index, length);
+};
+
+// false -> Array#indexOf
+// true  -> Array#includes
+
+
+
+var _arrayIncludes = function (IS_INCLUDES) {
+  return function ($this, el, fromIndex) {
+    var O = _toIobject($this);
+    var length = _toLength(O.length);
+    var index = _toAbsoluteIndex(fromIndex, length);
+    var value;
+    // Array#includes uses SameValueZero equality algorithm
+    // eslint-disable-next-line no-self-compare
+    if (IS_INCLUDES && el != el) while (length > index) {
+      value = O[index++];
+      // eslint-disable-next-line no-self-compare
+      if (value != value) return true;
+    // Array#indexOf ignores holes, Array#includes - not
+    } else for (;length > index; index++) if (IS_INCLUDES || index in O) {
+      if (O[index] === el) return IS_INCLUDES || index || 0;
+    } return !IS_INCLUDES && -1;
+  };
+};
+
+var shared = _shared('keys');
+
+var _sharedKey = function (key) {
+  return shared[key] || (shared[key] = _uid(key));
+};
+
+var arrayIndexOf = _arrayIncludes(false);
+var IE_PROTO = _sharedKey('IE_PROTO');
+
+var _objectKeysInternal = function (object, names) {
+  var O = _toIobject(object);
+  var i = 0;
+  var result = [];
+  var key;
+  for (key in O) if (key != IE_PROTO) _has(O, key) && result.push(key);
+  // Don't enum bug & hidden keys
+  while (names.length > i) if (_has(O, key = names[i++])) {
+    ~arrayIndexOf(result, key) || result.push(key);
+  }
+  return result;
+};
+
+// IE 8- don't enum bug keys
+var _enumBugKeys = (
+  'constructor,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'
+).split(',');
+
+// 19.1.2.14 / 15.2.3.14 Object.keys(O)
+
+
+
+var _objectKeys = Object.keys || function keys(O) {
+  return _objectKeysInternal(O, _enumBugKeys);
+};
+
+var f$1 = Object.getOwnPropertySymbols;
+
+var _objectGops = {
+	f: f$1
+};
+
+var f$2 = {}.propertyIsEnumerable;
+
+var _objectPie = {
+	f: f$2
+};
+
+// 19.1.2.1 Object.assign(target, source, ...)
+
+
+
+
+
+var $assign = Object.assign;
+
+// should work with symbols and should have deterministic property order (V8 bug)
+var _objectAssign = !$assign || _fails(function () {
+  var A = {};
+  var B = {};
+  // eslint-disable-next-line no-undef
+  var S = Symbol();
+  var K = 'abcdefghijklmnopqrst';
+  A[S] = 7;
+  K.split('').forEach(function (k) { B[k] = k; });
+  return $assign({}, A)[S] != 7 || Object.keys($assign({}, B)).join('') != K;
+}) ? function assign(target, source) { // eslint-disable-line no-unused-vars
+  var T = _toObject(target);
+  var aLen = arguments.length;
+  var index = 1;
+  var getSymbols = _objectGops.f;
+  var isEnum = _objectPie.f;
+  while (aLen > index) {
+    var S = _iobject(arguments[index++]);
+    var keys = getSymbols ? _objectKeys(S).concat(getSymbols(S)) : _objectKeys(S);
+    var length = keys.length;
+    var j = 0;
+    var key;
+    while (length > j) if (isEnum.call(S, key = keys[j++])) T[key] = S[key];
+  } return T;
+} : $assign;
+
+// 19.1.3.1 Object.assign(target, source)
+
+
+_export(_export.S + _export.F, 'Object', { assign: _objectAssign });
+
+var assign = _core.Object.assign;
+
+// 7.2.8 IsRegExp(argument)
+
+
+var MATCH = _wks('match');
+var _isRegexp = function (it) {
+  var isRegExp;
+  return _isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : _cof(it) == 'RegExp');
+};
+
+// helper for String#{startsWith, endsWith, includes}
+
+
+
+var _stringContext = function (that, searchString, NAME) {
+  if (_isRegexp(searchString)) throw TypeError('String#' + NAME + " doesn't accept regex!");
+  return String(_defined(that));
+};
+
+var MATCH$1 = _wks('match');
+var _failsIsRegexp = function (KEY) {
+  var re = /./;
+  try {
+    '/./'[KEY](re);
+  } catch (e) {
+    try {
+      re[MATCH$1] = false;
+      return !'/./'[KEY](re);
+    } catch (f) { /* empty */ }
+  } return true;
+};
+
+var STARTS_WITH = 'startsWith';
+var $startsWith = ''[STARTS_WITH];
+
+_export(_export.P + _export.F * _failsIsRegexp(STARTS_WITH), 'String', {
+  startsWith: function startsWith(searchString /* , position = 0 */) {
+    var that = _stringContext(this, searchString, STARTS_WITH);
+    var index = _toLength(Math.min(arguments.length > 1 ? arguments[1] : undefined, that.length));
+    var search = String(searchString);
+    return $startsWith
+      ? $startsWith.call(that, search, index)
+      : that.slice(index, index + search.length) === search;
+  }
+});
+
+var startsWith = _core.String.startsWith;
+
+var _stringRepeat = function repeat(count) {
+  var str = String(_defined(this));
+  var res = '';
+  var n = _toInteger(count);
+  if (n < 0 || n == Infinity) throw RangeError("Count can't be negative");
+  for (;n > 0; (n >>>= 1) && (str += str)) if (n & 1) res += str;
+  return res;
+};
+
+_export(_export.P, 'String', {
+  // 21.1.3.13 String.prototype.repeat(count)
+  repeat: _stringRepeat
+});
+
+var repeat = _core.String.repeat;
+
+var _meta = createCommonjsModule(function (module) {
+var META = _uid('meta');
+
+
+var setDesc = _objectDp.f;
+var id = 0;
+var isExtensible = Object.isExtensible || function () {
+  return true;
+};
+var FREEZE = !_fails(function () {
+  return isExtensible(Object.preventExtensions({}));
+});
+var setMeta = function (it) {
+  setDesc(it, META, { value: {
+    i: 'O' + ++id, // object ID
+    w: {}          // weak collections IDs
+  } });
+};
+var fastKey = function (it, create) {
+  // return primitive with prefix
+  if (!_isObject(it)) return typeof it == 'symbol' ? it : (typeof it == 'string' ? 'S' : 'P') + it;
+  if (!_has(it, META)) {
+    // can't set metadata to uncaught frozen object
+    if (!isExtensible(it)) return 'F';
+    // not necessary to add metadata
+    if (!create) return 'E';
+    // add missing metadata
+    setMeta(it);
+  // return object ID
+  } return it[META].i;
+};
+var getWeak = function (it, create) {
+  if (!_has(it, META)) {
+    // can't set metadata to uncaught frozen object
+    if (!isExtensible(it)) return true;
+    // not necessary to add metadata
+    if (!create) return false;
+    // add missing metadata
+    setMeta(it);
+  // return hash weak collections IDs
+  } return it[META].w;
+};
+// add metadata on freeze-family methods calling
+var onFreeze = function (it) {
+  if (FREEZE && meta.NEED && isExtensible(it) && !_has(it, META)) setMeta(it);
+  return it;
+};
+var meta = module.exports = {
+  KEY: META,
+  NEED: false,
+  fastKey: fastKey,
+  getWeak: getWeak,
+  onFreeze: onFreeze
+};
+});
+var _meta_1 = _meta.KEY;
+var _meta_2 = _meta.NEED;
+var _meta_3 = _meta.fastKey;
+var _meta_4 = _meta.getWeak;
+var _meta_5 = _meta.onFreeze;
+
+var def = _objectDp.f;
+
+var TAG = _wks('toStringTag');
+
+var _setToStringTag = function (it, tag, stat) {
+  if (it && !_has(it = stat ? it : it.prototype, TAG)) def(it, TAG, { configurable: true, value: tag });
+};
+
+var f$3 = _wks;
+
+var _wksExt = {
+	f: f$3
+};
+
+var _library = false;
+
+var defineProperty = _objectDp.f;
+var _wksDefine = function (name) {
+  var $Symbol = _core.Symbol || (_core.Symbol = _library ? {} : _global.Symbol || {});
+  if (name.charAt(0) != '_' && !(name in $Symbol)) defineProperty($Symbol, name, { value: _wksExt.f(name) });
+};
+
+// all enumerable object keys, includes symbols
+
+
+
+var _enumKeys = function (it) {
+  var result = _objectKeys(it);
+  var getSymbols = _objectGops.f;
+  if (getSymbols) {
+    var symbols = getSymbols(it);
+    var isEnum = _objectPie.f;
+    var i = 0;
+    var key;
+    while (symbols.length > i) if (isEnum.call(it, key = symbols[i++])) result.push(key);
+  } return result;
+};
+
+var _objectDps = _descriptors ? Object.defineProperties : function defineProperties(O, Properties) {
+  _anObject(O);
+  var keys = _objectKeys(Properties);
+  var length = keys.length;
+  var i = 0;
+  var P;
+  while (length > i) _objectDp.f(O, P = keys[i++], Properties[P]);
+  return O;
+};
+
+var document$1 = _global.document;
+var _html = document$1 && document$1.documentElement;
+
+// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
+
+
+
+var IE_PROTO$1 = _sharedKey('IE_PROTO');
+var Empty = function () { /* empty */ };
+var PROTOTYPE$1 = 'prototype';
+
+// Create object with fake `null` prototype: use iframe Object with cleared prototype
+var createDict = function () {
+  // Thrash, waste and sodomy: IE GC bug
+  var iframe = _domCreate('iframe');
+  var i = _enumBugKeys.length;
+  var lt = '<';
+  var gt = '>';
+  var iframeDocument;
+  iframe.style.display = 'none';
+  _html.appendChild(iframe);
+  iframe.src = 'javascript:'; // eslint-disable-line no-script-url
+  // createDict = iframe.contentWindow.Object;
+  // html.removeChild(iframe);
+  iframeDocument = iframe.contentWindow.document;
+  iframeDocument.open();
+  iframeDocument.write(lt + 'script' + gt + 'document.F=Object' + lt + '/script' + gt);
+  iframeDocument.close();
+  createDict = iframeDocument.F;
+  while (i--) delete createDict[PROTOTYPE$1][_enumBugKeys[i]];
+  return createDict();
+};
+
+var _objectCreate = Object.create || function create(O, Properties) {
+  var result;
+  if (O !== null) {
+    Empty[PROTOTYPE$1] = _anObject(O);
+    result = new Empty();
+    Empty[PROTOTYPE$1] = null;
+    // add "__proto__" for Object.getPrototypeOf polyfill
+    result[IE_PROTO$1] = O;
+  } else result = createDict();
+  return Properties === undefined ? result : _objectDps(result, Properties);
+};
+
+// 19.1.2.7 / 15.2.3.4 Object.getOwnPropertyNames(O)
+
+var hiddenKeys = _enumBugKeys.concat('length', 'prototype');
+
+var f$4 = Object.getOwnPropertyNames || function getOwnPropertyNames(O) {
+  return _objectKeysInternal(O, hiddenKeys);
+};
+
+var _objectGopn = {
+	f: f$4
+};
+
+// fallback for IE11 buggy Object.getOwnPropertyNames with iframe and window
+
+var gOPN = _objectGopn.f;
+var toString$1 = {}.toString;
+
+var windowNames = typeof window == 'object' && window && Object.getOwnPropertyNames
+  ? Object.getOwnPropertyNames(window) : [];
+
+var getWindowNames = function (it) {
+  try {
+    return gOPN(it);
+  } catch (e) {
+    return windowNames.slice();
+  }
+};
+
+var f$5 = function getOwnPropertyNames(it) {
+  return windowNames && toString$1.call(it) == '[object Window]' ? getWindowNames(it) : gOPN(_toIobject(it));
+};
+
+var _objectGopnExt = {
+	f: f$5
+};
+
+var gOPD = Object.getOwnPropertyDescriptor;
+
+var f$6 = _descriptors ? gOPD : function getOwnPropertyDescriptor(O, P) {
+  O = _toIobject(O);
+  P = _toPrimitive(P, true);
+  if (_ie8DomDefine) try {
+    return gOPD(O, P);
+  } catch (e) { /* empty */ }
+  if (_has(O, P)) return _propertyDesc(!_objectPie.f.call(O, P), O[P]);
+};
+
+var _objectGopd = {
+	f: f$6
+};
+
+// ECMAScript 6 symbols shim
+
+
+
+
+
+var META = _meta.KEY;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var gOPD$1 = _objectGopd.f;
+var dP$1 = _objectDp.f;
+var gOPN$1 = _objectGopnExt.f;
+var $Symbol = _global.Symbol;
+var $JSON = _global.JSON;
+var _stringify = $JSON && $JSON.stringify;
+var PROTOTYPE$2 = 'prototype';
+var HIDDEN = _wks('_hidden');
+var TO_PRIMITIVE = _wks('toPrimitive');
+var isEnum = {}.propertyIsEnumerable;
+var SymbolRegistry = _shared('symbol-registry');
+var AllSymbols = _shared('symbols');
+var OPSymbols = _shared('op-symbols');
+var ObjectProto = Object[PROTOTYPE$2];
+var USE_NATIVE = typeof $Symbol == 'function';
+var QObject = _global.QObject;
+// Don't use setters in Qt Script, https://github.com/zloirock/core-js/issues/173
+var setter = !QObject || !QObject[PROTOTYPE$2] || !QObject[PROTOTYPE$2].findChild;
+
+// fallback for old Android, https://code.google.com/p/v8/issues/detail?id=687
+var setSymbolDesc = _descriptors && _fails(function () {
+  return _objectCreate(dP$1({}, 'a', {
+    get: function () { return dP$1(this, 'a', { value: 7 }).a; }
+  })).a != 7;
+}) ? function (it, key, D) {
+  var protoDesc = gOPD$1(ObjectProto, key);
+  if (protoDesc) delete ObjectProto[key];
+  dP$1(it, key, D);
+  if (protoDesc && it !== ObjectProto) dP$1(ObjectProto, key, protoDesc);
+} : dP$1;
+
+var wrap = function (tag) {
+  var sym = AllSymbols[tag] = _objectCreate($Symbol[PROTOTYPE$2]);
+  sym._k = tag;
+  return sym;
+};
+
+var isSymbol = USE_NATIVE && typeof $Symbol.iterator == 'symbol' ? function (it) {
+  return typeof it == 'symbol';
+} : function (it) {
+  return it instanceof $Symbol;
+};
+
+var $defineProperty = function defineProperty(it, key, D) {
+  if (it === ObjectProto) $defineProperty(OPSymbols, key, D);
+  _anObject(it);
+  key = _toPrimitive(key, true);
+  _anObject(D);
+  if (_has(AllSymbols, key)) {
+    if (!D.enumerable) {
+      if (!_has(it, HIDDEN)) dP$1(it, HIDDEN, _propertyDesc(1, {}));
+      it[HIDDEN][key] = true;
+    } else {
+      if (_has(it, HIDDEN) && it[HIDDEN][key]) it[HIDDEN][key] = false;
+      D = _objectCreate(D, { enumerable: _propertyDesc(0, false) });
+    } return setSymbolDesc(it, key, D);
+  } return dP$1(it, key, D);
+};
+var $defineProperties = function defineProperties(it, P) {
+  _anObject(it);
+  var keys = _enumKeys(P = _toIobject(P));
+  var i = 0;
+  var l = keys.length;
+  var key;
+  while (l > i) $defineProperty(it, key = keys[i++], P[key]);
+  return it;
+};
+var $create = function create(it, P) {
+  return P === undefined ? _objectCreate(it) : $defineProperties(_objectCreate(it), P);
+};
+var $propertyIsEnumerable = function propertyIsEnumerable(key) {
+  var E = isEnum.call(this, key = _toPrimitive(key, true));
+  if (this === ObjectProto && _has(AllSymbols, key) && !_has(OPSymbols, key)) return false;
+  return E || !_has(this, key) || !_has(AllSymbols, key) || _has(this, HIDDEN) && this[HIDDEN][key] ? E : true;
+};
+var $getOwnPropertyDescriptor = function getOwnPropertyDescriptor(it, key) {
+  it = _toIobject(it);
+  key = _toPrimitive(key, true);
+  if (it === ObjectProto && _has(AllSymbols, key) && !_has(OPSymbols, key)) return;
+  var D = gOPD$1(it, key);
+  if (D && _has(AllSymbols, key) && !(_has(it, HIDDEN) && it[HIDDEN][key])) D.enumerable = true;
+  return D;
+};
+var $getOwnPropertyNames = function getOwnPropertyNames(it) {
+  var names = gOPN$1(_toIobject(it));
+  var result = [];
+  var i = 0;
+  var key;
+  while (names.length > i) {
+    if (!_has(AllSymbols, key = names[i++]) && key != HIDDEN && key != META) result.push(key);
+  } return result;
+};
+var $getOwnPropertySymbols = function getOwnPropertySymbols(it) {
+  var IS_OP = it === ObjectProto;
+  var names = gOPN$1(IS_OP ? OPSymbols : _toIobject(it));
+  var result = [];
+  var i = 0;
+  var key;
+  while (names.length > i) {
+    if (_has(AllSymbols, key = names[i++]) && (IS_OP ? _has(ObjectProto, key) : true)) result.push(AllSymbols[key]);
+  } return result;
+};
+
+// 19.4.1.1 Symbol([description])
+if (!USE_NATIVE) {
+  $Symbol = function Symbol() {
+    if (this instanceof $Symbol) throw TypeError('Symbol is not a constructor!');
+    var tag = _uid(arguments.length > 0 ? arguments[0] : undefined);
+    var $set = function (value) {
+      if (this === ObjectProto) $set.call(OPSymbols, value);
+      if (_has(this, HIDDEN) && _has(this[HIDDEN], tag)) this[HIDDEN][tag] = false;
+      setSymbolDesc(this, tag, _propertyDesc(1, value));
+    };
+    if (_descriptors && setter) setSymbolDesc(ObjectProto, tag, { configurable: true, set: $set });
+    return wrap(tag);
+  };
+  _redefine($Symbol[PROTOTYPE$2], 'toString', function toString() {
+    return this._k;
+  });
+
+  _objectGopd.f = $getOwnPropertyDescriptor;
+  _objectDp.f = $defineProperty;
+  _objectGopn.f = _objectGopnExt.f = $getOwnPropertyNames;
+  _objectPie.f = $propertyIsEnumerable;
+  _objectGops.f = $getOwnPropertySymbols;
+
+  if (_descriptors && !_library) {
+    _redefine(ObjectProto, 'propertyIsEnumerable', $propertyIsEnumerable, true);
+  }
+
+  _wksExt.f = function (name) {
+    return wrap(_wks(name));
+  };
+}
+
+_export(_export.G + _export.W + _export.F * !USE_NATIVE, { Symbol: $Symbol });
+
+for (var es6Symbols = (
+  // 19.4.2.2, 19.4.2.3, 19.4.2.4, 19.4.2.6, 19.4.2.8, 19.4.2.9, 19.4.2.10, 19.4.2.11, 19.4.2.12, 19.4.2.13, 19.4.2.14
+  'hasInstance,isConcatSpreadable,iterator,match,replace,search,species,split,toPrimitive,toStringTag,unscopables'
+).split(','), j = 0; es6Symbols.length > j;)_wks(es6Symbols[j++]);
+
+for (var wellKnownSymbols = _objectKeys(_wks.store), k = 0; wellKnownSymbols.length > k;) _wksDefine(wellKnownSymbols[k++]);
+
+_export(_export.S + _export.F * !USE_NATIVE, 'Symbol', {
+  // 19.4.2.1 Symbol.for(key)
+  'for': function (key) {
+    return _has(SymbolRegistry, key += '')
+      ? SymbolRegistry[key]
+      : SymbolRegistry[key] = $Symbol(key);
+  },
+  // 19.4.2.5 Symbol.keyFor(sym)
+  keyFor: function keyFor(sym) {
+    if (!isSymbol(sym)) throw TypeError(sym + ' is not a symbol!');
+    for (var key in SymbolRegistry) if (SymbolRegistry[key] === sym) return key;
+  },
+  useSetter: function () { setter = true; },
+  useSimple: function () { setter = false; }
+});
+
+_export(_export.S + _export.F * !USE_NATIVE, 'Object', {
+  // 19.1.2.2 Object.create(O [, Properties])
+  create: $create,
+  // 19.1.2.4 Object.defineProperty(O, P, Attributes)
+  defineProperty: $defineProperty,
+  // 19.1.2.3 Object.defineProperties(O, Properties)
+  defineProperties: $defineProperties,
+  // 19.1.2.6 Object.getOwnPropertyDescriptor(O, P)
+  getOwnPropertyDescriptor: $getOwnPropertyDescriptor,
+  // 19.1.2.7 Object.getOwnPropertyNames(O)
+  getOwnPropertyNames: $getOwnPropertyNames,
+  // 19.1.2.8 Object.getOwnPropertySymbols(O)
+  getOwnPropertySymbols: $getOwnPropertySymbols
+});
+
+// 24.3.2 JSON.stringify(value [, replacer [, space]])
+$JSON && _export(_export.S + _export.F * (!USE_NATIVE || _fails(function () {
+  var S = $Symbol();
+  // MS Edge converts symbol values to JSON as {}
+  // WebKit converts symbol values to JSON as null
+  // V8 throws on boxed symbols
+  return _stringify([S]) != '[null]' || _stringify({ a: S }) != '{}' || _stringify(Object(S)) != '{}';
+})), 'JSON', {
+  stringify: function stringify(it) {
+    var args = [it];
+    var i = 1;
+    var replacer, $replacer;
+    while (arguments.length > i) args.push(arguments[i++]);
+    $replacer = replacer = args[1];
+    if (!_isObject(replacer) && it === undefined || isSymbol(it)) return; // IE8 returns string on undefined
+    if (!_isArray(replacer)) replacer = function (key, value) {
+      if (typeof $replacer == 'function') value = $replacer.call(this, key, value);
+      if (!isSymbol(value)) return value;
+    };
+    args[1] = replacer;
+    return _stringify.apply($JSON, args);
+  }
+});
+
+// 19.4.3.4 Symbol.prototype[@@toPrimitive](hint)
+$Symbol[PROTOTYPE$2][TO_PRIMITIVE] || _hide($Symbol[PROTOTYPE$2], TO_PRIMITIVE, $Symbol[PROTOTYPE$2].valueOf);
+// 19.4.3.5 Symbol.prototype[@@toStringTag]
+_setToStringTag($Symbol, 'Symbol');
+// 20.2.1.9 Math[@@toStringTag]
+_setToStringTag(Math, 'Math', true);
+// 24.3.3 JSON[@@toStringTag]
+_setToStringTag(_global.JSON, 'JSON', true);
+
+// getting tag from 19.1.3.6 Object.prototype.toString()
+
+var TAG$1 = _wks('toStringTag');
+// ES3 wrong here
+var ARG = _cof(function () { return arguments; }()) == 'Arguments';
+
+// fallback for IE11 Script Access Denied error
+var tryGet = function (it, key) {
+  try {
+    return it[key];
+  } catch (e) { /* empty */ }
+};
+
+var _classof = function (it) {
+  var O, T, B;
+  return it === undefined ? 'Undefined' : it === null ? 'Null'
+    // @@toStringTag case
+    : typeof (T = tryGet(O = Object(it), TAG$1)) == 'string' ? T
+    // builtinTag case
+    : ARG ? _cof(O)
+    // ES3 arguments fallback
+    : (B = _cof(O)) == 'Object' && typeof O.callee == 'function' ? 'Arguments' : B;
+};
+
+// 19.1.3.6 Object.prototype.toString()
+
+var test = {};
+test[_wks('toStringTag')] = 'z';
+if (test + '' != '[object z]') {
+  _redefine(Object.prototype, 'toString', function toString() {
+    return '[object ' + _classof(this) + ']';
+  }, true);
+}
+
+_wksDefine('asyncIterator');
+
+_wksDefine('observable');
+
+var symbol = _core.Symbol;
+
+// true  -> String#at
+// false -> String#codePointAt
+var _stringAt = function (TO_STRING) {
+  return function (that, pos) {
+    var s = String(_defined(that));
+    var i = _toInteger(pos);
+    var l = s.length;
+    var a, b;
+    if (i < 0 || i >= l) return TO_STRING ? '' : undefined;
+    a = s.charCodeAt(i);
+    return a < 0xd800 || a > 0xdbff || i + 1 === l || (b = s.charCodeAt(i + 1)) < 0xdc00 || b > 0xdfff
+      ? TO_STRING ? s.charAt(i) : a
+      : TO_STRING ? s.slice(i, i + 2) : (a - 0xd800 << 10) + (b - 0xdc00) + 0x10000;
+  };
+};
+
+var _iterators = {};
+
+var IteratorPrototype = {};
+
+// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
+_hide(IteratorPrototype, _wks('iterator'), function () { return this; });
+
+var _iterCreate = function (Constructor, NAME, next) {
+  Constructor.prototype = _objectCreate(IteratorPrototype, { next: _propertyDesc(1, next) });
+  _setToStringTag(Constructor, NAME + ' Iterator');
+};
+
+// 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
+
+
+var IE_PROTO$2 = _sharedKey('IE_PROTO');
+var ObjectProto$1 = Object.prototype;
+
+var _objectGpo = Object.getPrototypeOf || function (O) {
+  O = _toObject(O);
+  if (_has(O, IE_PROTO$2)) return O[IE_PROTO$2];
+  if (typeof O.constructor == 'function' && O instanceof O.constructor) {
+    return O.constructor.prototype;
+  } return O instanceof Object ? ObjectProto$1 : null;
+};
+
+var ITERATOR = _wks('iterator');
+var BUGGY = !([].keys && 'next' in [].keys()); // Safari has buggy iterators w/o `next`
+var FF_ITERATOR = '@@iterator';
+var KEYS = 'keys';
+var VALUES = 'values';
+
+var returnThis = function () { return this; };
+
+var _iterDefine = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCED) {
+  _iterCreate(Constructor, NAME, next);
+  var getMethod = function (kind) {
+    if (!BUGGY && kind in proto) return proto[kind];
+    switch (kind) {
+      case KEYS: return function keys() { return new Constructor(this, kind); };
+      case VALUES: return function values() { return new Constructor(this, kind); };
+    } return function entries() { return new Constructor(this, kind); };
+  };
+  var TAG = NAME + ' Iterator';
+  var DEF_VALUES = DEFAULT == VALUES;
+  var VALUES_BUG = false;
+  var proto = Base.prototype;
+  var $native = proto[ITERATOR] || proto[FF_ITERATOR] || DEFAULT && proto[DEFAULT];
+  var $default = $native || getMethod(DEFAULT);
+  var $entries = DEFAULT ? !DEF_VALUES ? $default : getMethod('entries') : undefined;
+  var $anyNative = NAME == 'Array' ? proto.entries || $native : $native;
+  var methods, key, IteratorPrototype;
+  // Fix native
+  if ($anyNative) {
+    IteratorPrototype = _objectGpo($anyNative.call(new Base()));
+    if (IteratorPrototype !== Object.prototype && IteratorPrototype.next) {
+      // Set @@toStringTag to native iterators
+      _setToStringTag(IteratorPrototype, TAG, true);
+      // fix for some old engines
+      if (!_library && typeof IteratorPrototype[ITERATOR] != 'function') _hide(IteratorPrototype, ITERATOR, returnThis);
+    }
+  }
+  // fix Array#{values, @@iterator}.name in V8 / FF
+  if (DEF_VALUES && $native && $native.name !== VALUES) {
+    VALUES_BUG = true;
+    $default = function values() { return $native.call(this); };
+  }
+  // Define iterator
+  if ((!_library || FORCED) && (BUGGY || VALUES_BUG || !proto[ITERATOR])) {
+    _hide(proto, ITERATOR, $default);
+  }
+  // Plug for library
+  _iterators[NAME] = $default;
+  _iterators[TAG] = returnThis;
+  if (DEFAULT) {
+    methods = {
+      values: DEF_VALUES ? $default : getMethod(VALUES),
+      keys: IS_SET ? $default : getMethod(KEYS),
+      entries: $entries
+    };
+    if (FORCED) for (key in methods) {
+      if (!(key in proto)) _redefine(proto, key, methods[key]);
+    } else _export(_export.P + _export.F * (BUGGY || VALUES_BUG), NAME, methods);
+  }
+  return methods;
+};
+
+var $at = _stringAt(true);
+
+// 21.1.3.27 String.prototype[@@iterator]()
+_iterDefine(String, 'String', function (iterated) {
+  this._t = String(iterated); // target
+  this._i = 0;                // next index
+// 21.1.5.2.1 %StringIteratorPrototype%.next()
+}, function () {
+  var O = this._t;
+  var index = this._i;
+  var point;
+  if (index >= O.length) return { value: undefined, done: true };
+  point = $at(O, index);
+  this._i += point.length;
+  return { value: point, done: false };
+});
+
+var _iterStep = function (done, value) {
+  return { value: value, done: !!done };
+};
+
+// 22.1.3.4 Array.prototype.entries()
+// 22.1.3.13 Array.prototype.keys()
+// 22.1.3.29 Array.prototype.values()
+// 22.1.3.30 Array.prototype[@@iterator]()
+var es6_array_iterator = _iterDefine(Array, 'Array', function (iterated, kind) {
+  this._t = _toIobject(iterated); // target
+  this._i = 0;                   // next index
+  this._k = kind;                // kind
+// 22.1.5.2.1 %ArrayIteratorPrototype%.next()
+}, function () {
+  var O = this._t;
+  var kind = this._k;
+  var index = this._i++;
+  if (!O || index >= O.length) {
+    this._t = undefined;
+    return _iterStep(1);
+  }
+  if (kind == 'keys') return _iterStep(0, index);
+  if (kind == 'values') return _iterStep(0, O[index]);
+  return _iterStep(0, [index, O[index]]);
+}, 'values');
+
+// argumentsList[@@iterator] is %ArrayProto_values% (9.4.4.6, 9.4.4.7)
+_iterators.Arguments = _iterators.Array;
+
+_addToUnscopables('keys');
+_addToUnscopables('values');
+_addToUnscopables('entries');
+
+var ITERATOR$1 = _wks('iterator');
+var TO_STRING_TAG = _wks('toStringTag');
+var ArrayValues = _iterators.Array;
+
+var DOMIterables = {
+  CSSRuleList: true, // TODO: Not spec compliant, should be false.
+  CSSStyleDeclaration: false,
+  CSSValueList: false,
+  ClientRectList: false,
+  DOMRectList: false,
+  DOMStringList: false,
+  DOMTokenList: true,
+  DataTransferItemList: false,
+  FileList: false,
+  HTMLAllCollection: false,
+  HTMLCollection: false,
+  HTMLFormElement: false,
+  HTMLSelectElement: false,
+  MediaList: true, // TODO: Not spec compliant, should be false.
+  MimeTypeArray: false,
+  NamedNodeMap: false,
+  NodeList: true,
+  PaintRequestList: false,
+  Plugin: false,
+  PluginArray: false,
+  SVGLengthList: false,
+  SVGNumberList: false,
+  SVGPathSegList: false,
+  SVGPointList: false,
+  SVGStringList: false,
+  SVGTransformList: false,
+  SourceBufferList: false,
+  StyleSheetList: true, // TODO: Not spec compliant, should be false.
+  TextTrackCueList: false,
+  TextTrackList: false,
+  TouchList: false
+};
+
+for (var collections = _objectKeys(DOMIterables), i = 0; i < collections.length; i++) {
+  var NAME = collections[i];
+  var explicit = DOMIterables[NAME];
+  var Collection = _global[NAME];
+  var proto = Collection && Collection.prototype;
+  var key;
+  if (proto) {
+    if (!proto[ITERATOR$1]) _hide(proto, ITERATOR$1, ArrayValues);
+    if (!proto[TO_STRING_TAG]) _hide(proto, TO_STRING_TAG, NAME);
+    _iterators[NAME] = ArrayValues;
+    if (explicit) for (key in es6_array_iterator) if (!proto[key]) _redefine(proto, key, es6_array_iterator[key], true);
+  }
+}
+
+var iterator = _wksExt.f('iterator');
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+/***/ }),
+
+/***/ "./node_modules/@firebase/storage/dist/index.esm.js":
+/*!**********************************************************!*\
+  !*** ./node_modules/@firebase/storage/dist/index.esm.js ***!
+  \**********************************************************/
+/*! exports provided: registerStorage */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "registerStorage", function() { return registerStorage; });
+/* harmony import */ var _firebase_app__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @firebase/app */ "./node_modules/@firebase/app/dist/index.cjs.js");
+/* harmony import */ var _firebase_app__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_firebase_app__WEBPACK_IMPORTED_MODULE_0__);
+
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @fileoverview Constants used in the Firebase Storage library.
+ */
+/**
+ * Domain and scheme for API calls.
+ */
+var domainBase = 'https://firebasestorage.googleapis.com';
+/**
+ * Domain and scheme for object downloads.
+ */
+var downloadBase = 'https://firebasestorage.googleapis.com';
+/**
+ * Base URL for non-upload calls to the API.
+ */
+var apiBaseUrl = '/v0';
+/**
+ * Base URL for upload calls to the API.
+ */
+var apiUploadBaseUrl = '/v0';
+var configOption = 'storageBucket';
+/**
+ * 2 minutes
+ */
+var defaultMaxOperationRetryTime = 2 * 60 * 1000;
+/**
+ * 10 minutes
+ */
+var defaultMaxUploadRetryTime = 10 * 60 * 100;
+/**
+ * This is the value of Number.MIN_SAFE_INTEGER, which is not well supported
+ * enough for us to use it directly.
+ */
+var minSafeInteger = -9007199254740991;
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var FirebaseStorageError = /** @class */ (function () {
+    function FirebaseStorageError(code, message) {
+        this.code_ = prependCode(code);
+        this.message_ = 'Firebase Storage: ' + message;
+        this.serverResponse_ = null;
+        this.name_ = 'FirebaseError';
+    }
+    FirebaseStorageError.prototype.codeProp = function () {
+        return this.code;
+    };
+    FirebaseStorageError.prototype.codeEquals = function (code) {
+        return prependCode(code) === this.codeProp();
+    };
+    FirebaseStorageError.prototype.serverResponseProp = function () {
+        return this.serverResponse_;
+    };
+    FirebaseStorageError.prototype.setServerResponseProp = function (serverResponse) {
+        this.serverResponse_ = serverResponse;
+    };
+    Object.defineProperty(FirebaseStorageError.prototype, "name", {
+        get: function () {
+            return this.name_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(FirebaseStorageError.prototype, "code", {
+        get: function () {
+            return this.code_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(FirebaseStorageError.prototype, "message", {
+        get: function () {
+            return this.message_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(FirebaseStorageError.prototype, "serverResponse", {
+        get: function () {
+            return this.serverResponse_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return FirebaseStorageError;
+}());
+var Code = {
+    // Shared between all platforms
+    UNKNOWN: 'unknown',
+    OBJECT_NOT_FOUND: 'object-not-found',
+    BUCKET_NOT_FOUND: 'bucket-not-found',
+    PROJECT_NOT_FOUND: 'project-not-found',
+    QUOTA_EXCEEDED: 'quota-exceeded',
+    UNAUTHENTICATED: 'unauthenticated',
+    UNAUTHORIZED: 'unauthorized',
+    RETRY_LIMIT_EXCEEDED: 'retry-limit-exceeded',
+    INVALID_CHECKSUM: 'invalid-checksum',
+    CANCELED: 'canceled',
+    // JS specific
+    INVALID_EVENT_NAME: 'invalid-event-name',
+    INVALID_URL: 'invalid-url',
+    INVALID_DEFAULT_BUCKET: 'invalid-default-bucket',
+    NO_DEFAULT_BUCKET: 'no-default-bucket',
+    CANNOT_SLICE_BLOB: 'cannot-slice-blob',
+    SERVER_FILE_WRONG_SIZE: 'server-file-wrong-size',
+    NO_DOWNLOAD_URL: 'no-download-url',
+    INVALID_ARGUMENT: 'invalid-argument',
+    INVALID_ARGUMENT_COUNT: 'invalid-argument-count',
+    APP_DELETED: 'app-deleted',
+    INVALID_ROOT_OPERATION: 'invalid-root-operation',
+    INVALID_FORMAT: 'invalid-format',
+    INTERNAL_ERROR: 'internal-error'
+};
+function prependCode(code) {
+    return 'storage/' + code;
+}
+function unknown() {
+    var message = 'An unknown error occurred, please check the error payload for ' +
+        'server response.';
+    return new FirebaseStorageError(Code.UNKNOWN, message);
+}
+function objectNotFound(path) {
+    return new FirebaseStorageError(Code.OBJECT_NOT_FOUND, "Object '" + path + "' does not exist.");
+}
+function quotaExceeded(bucket) {
+    return new FirebaseStorageError(Code.QUOTA_EXCEEDED, "Quota for bucket '" +
+        bucket +
+        "' exceeded, please view quota on " +
+        'https://firebase.google.com/pricing/.');
+}
+function unauthenticated() {
+    var message = 'User is not authenticated, please authenticate using Firebase ' +
+        'Authentication and try again.';
+    return new FirebaseStorageError(Code.UNAUTHENTICATED, message);
+}
+function unauthorized(path) {
+    return new FirebaseStorageError(Code.UNAUTHORIZED, "User does not have permission to access '" + path + "'.");
+}
+function retryLimitExceeded() {
+    return new FirebaseStorageError(Code.RETRY_LIMIT_EXCEEDED, 'Max retry time for operation exceeded, please try again.');
+}
+function canceled() {
+    return new FirebaseStorageError(Code.CANCELED, 'User canceled the upload/download.');
+}
+function invalidUrl(url) {
+    return new FirebaseStorageError(Code.INVALID_URL, "Invalid URL '" + url + "'.");
+}
+function invalidDefaultBucket(bucket) {
+    return new FirebaseStorageError(Code.INVALID_DEFAULT_BUCKET, "Invalid default bucket '" + bucket + "'.");
+}
+function cannotSliceBlob() {
+    return new FirebaseStorageError(Code.CANNOT_SLICE_BLOB, 'Cannot slice blob for upload. Please retry the upload.');
+}
+function serverFileWrongSize() {
+    return new FirebaseStorageError(Code.SERVER_FILE_WRONG_SIZE, 'Server recorded incorrect upload file size, please retry the upload.');
+}
+function noDownloadURL() {
+    return new FirebaseStorageError(Code.NO_DOWNLOAD_URL, 'The given file does not have any download URLs.');
+}
+function invalidArgument(index, fnName, message) {
+    return new FirebaseStorageError(Code.INVALID_ARGUMENT, 'Invalid argument in `' + fnName + '` at index ' + index + ': ' + message);
+}
+function invalidArgumentCount(argMin, argMax, fnName, real) {
+    var countPart;
+    var plural;
+    if (argMin === argMax) {
+        countPart = argMin;
+        plural = argMin === 1 ? 'argument' : 'arguments';
+    }
+    else {
+        countPart = 'between ' + argMin + ' and ' + argMax;
+        plural = 'arguments';
+    }
+    return new FirebaseStorageError(Code.INVALID_ARGUMENT_COUNT, 'Invalid argument count in `' +
+        fnName +
+        '`: Expected ' +
+        countPart +
+        ' ' +
+        plural +
+        ', received ' +
+        real +
+        '.');
+}
+function appDeleted() {
+    return new FirebaseStorageError(Code.APP_DELETED, 'The Firebase app was deleted.');
+}
+/**
+ * @param name The name of the operation that was invalid.
+ */
+function invalidRootOperation(name) {
+    return new FirebaseStorageError(Code.INVALID_ROOT_OPERATION, "The operation '" +
+        name +
+        "' cannot be performed on a root reference, create a non-root " +
+        "reference using child, such as .child('file.png').");
+}
+/**
+ * @param format The format that was not valid.
+ * @param message A message describing the format violation.
+ */
+function invalidFormat(format, message) {
+    return new FirebaseStorageError(Code.INVALID_FORMAT, "String does not match format '" + format + "': " + message);
+}
+/**
+ * @param message A message describing the internal error.
+ */
+function internalError(message) {
+    throw new FirebaseStorageError(Code.INTERNAL_ERROR, 'Internal error: ' + message);
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var StringFormat = {
+    RAW: 'raw',
+    BASE64: 'base64',
+    BASE64URL: 'base64url',
+    DATA_URL: 'data_url'
+};
+function formatValidator(stringFormat) {
+    switch (stringFormat) {
+        case StringFormat.RAW:
+        case StringFormat.BASE64:
+        case StringFormat.BASE64URL:
+        case StringFormat.DATA_URL:
+            return;
+        default:
+            throw 'Expected one of the event types: [' +
+                StringFormat.RAW +
+                ', ' +
+                StringFormat.BASE64 +
+                ', ' +
+                StringFormat.BASE64URL +
+                ', ' +
+                StringFormat.DATA_URL +
+                '].';
+    }
+}
+/**
+ * @struct
+ */
+var StringData = /** @class */ (function () {
+    function StringData(data, opt_contentType) {
+        this.data = data;
+        this.contentType = opt_contentType || null;
+    }
+    return StringData;
+}());
+function dataFromString(format, string) {
+    switch (format) {
+        case StringFormat.RAW:
+            return new StringData(utf8Bytes_(string));
+        case StringFormat.BASE64:
+        case StringFormat.BASE64URL:
+            return new StringData(base64Bytes_(format, string));
+        case StringFormat.DATA_URL:
+            return new StringData(dataURLBytes_(string), dataURLContentType_(string));
+    }
+    // assert(false);
+    throw unknown();
+}
+function utf8Bytes_(string) {
+    var b = [];
+    for (var i = 0; i < string.length; i++) {
+        var c = string.charCodeAt(i);
+        if (c <= 127) {
+            b.push(c);
+        }
+        else {
+            if (c <= 2047) {
+                b.push(192 | (c >> 6), 128 | (c & 63));
+            }
+            else {
+                if ((c & 64512) == 55296) {
+                    // The start of a surrogate pair.
+                    var valid = i < string.length - 1 &&
+                        (string.charCodeAt(i + 1) & 64512) == 56320;
+                    if (!valid) {
+                        // The second surrogate wasn't there.
+                        b.push(239, 191, 189);
+                    }
+                    else {
+                        var hi = c;
+                        var lo = string.charCodeAt(++i);
+                        c = 65536 | ((hi & 1023) << 10) | (lo & 1023);
+                        b.push(240 | (c >> 18), 128 | ((c >> 12) & 63), 128 | ((c >> 6) & 63), 128 | (c & 63));
+                    }
+                }
+                else {
+                    if ((c & 64512) == 56320) {
+                        // Invalid low surrogate.
+                        b.push(239, 191, 189);
+                    }
+                    else {
+                        b.push(224 | (c >> 12), 128 | ((c >> 6) & 63), 128 | (c & 63));
+                    }
+                }
+            }
+        }
+    }
+    return new Uint8Array(b);
+}
+function percentEncodedBytes_(string) {
+    var decoded;
+    try {
+        decoded = decodeURIComponent(string);
+    }
+    catch (e) {
+        throw invalidFormat(StringFormat.DATA_URL, 'Malformed data URL.');
+    }
+    return utf8Bytes_(decoded);
+}
+function base64Bytes_(format, string) {
+    switch (format) {
+        case StringFormat.BASE64: {
+            var hasMinus = string.indexOf('-') !== -1;
+            var hasUnder = string.indexOf('_') !== -1;
+            if (hasMinus || hasUnder) {
+                var invalidChar = hasMinus ? '-' : '_';
+                throw invalidFormat(format, "Invalid character '" +
+                    invalidChar +
+                    "' found: is it base64url encoded?");
+            }
+            break;
+        }
+        case StringFormat.BASE64URL: {
+            var hasPlus = string.indexOf('+') !== -1;
+            var hasSlash = string.indexOf('/') !== -1;
+            if (hasPlus || hasSlash) {
+                var invalidChar = hasPlus ? '+' : '/';
+                throw invalidFormat(format, "Invalid character '" + invalidChar + "' found: is it base64 encoded?");
+            }
+            string = string.replace(/-/g, '+').replace(/_/g, '/');
+            break;
+        }
+    }
+    var bytes;
+    try {
+        bytes = atob(string);
+    }
+    catch (e) {
+        throw invalidFormat(format, 'Invalid character found');
+    }
+    var array = new Uint8Array(bytes.length);
+    for (var i = 0; i < bytes.length; i++) {
+        array[i] = bytes.charCodeAt(i);
+    }
+    return array;
+}
+/**
+ * @struct
+ */
+var DataURLParts = /** @class */ (function () {
+    function DataURLParts(dataURL) {
+        this.base64 = false;
+        this.contentType = null;
+        var matches = dataURL.match(/^data:([^,]+)?,/);
+        if (matches === null) {
+            throw invalidFormat(StringFormat.DATA_URL, "Must be formatted 'data:[<mediatype>][;base64],<data>");
+        }
+        var middle = matches[1] || null;
+        if (middle != null) {
+            this.base64 = endsWith(middle, ';base64');
+            this.contentType = this.base64
+                ? middle.substring(0, middle.length - ';base64'.length)
+                : middle;
+        }
+        this.rest = dataURL.substring(dataURL.indexOf(',') + 1);
+    }
+    return DataURLParts;
+}());
+function dataURLBytes_(string) {
+    var parts = new DataURLParts(string);
+    if (parts.base64) {
+        return base64Bytes_(StringFormat.BASE64, parts.rest);
+    }
+    else {
+        return percentEncodedBytes_(parts.rest);
+    }
+}
+function dataURLContentType_(string) {
+    var parts = new DataURLParts(string);
+    return parts.contentType;
+}
+function endsWith(s, end) {
+    var longEnough = s.length >= end.length;
+    if (!longEnough) {
+        return false;
+    }
+    return s.substring(s.length - end.length) === end;
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var TaskEvent = {
+    /** Triggered whenever the task changes or progress is updated. */
+    STATE_CHANGED: 'state_changed'
+};
+var InternalTaskState = {
+    RUNNING: 'running',
+    PAUSING: 'pausing',
+    PAUSED: 'paused',
+    SUCCESS: 'success',
+    CANCELING: 'canceling',
+    CANCELED: 'canceled',
+    ERROR: 'error'
+};
+var TaskState = {
+    /** The task is currently transferring data. */
+    RUNNING: 'running',
+    /** The task was paused by the user. */
+    PAUSED: 'paused',
+    /** The task completed successfully. */
+    SUCCESS: 'success',
+    /** The task was canceled. */
+    CANCELED: 'canceled',
+    /** The task failed with an error. */
+    ERROR: 'error'
+};
+function taskStateFromInternalTaskState(state) {
+    switch (state) {
+        case InternalTaskState.RUNNING:
+        case InternalTaskState.PAUSING:
+        case InternalTaskState.CANCELING:
+            return TaskState.RUNNING;
+        case InternalTaskState.PAUSED:
+            return TaskState.PAUSED;
+        case InternalTaskState.SUCCESS:
+            return TaskState.SUCCESS;
+        case InternalTaskState.CANCELED:
+            return TaskState.CANCELED;
+        case InternalTaskState.ERROR:
+            return TaskState.ERROR;
+        default:
+            // TODO(andysoto): assert(false);
+            return TaskState.ERROR;
+    }
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @fileoverview Contains methods for working with objects.
+ */
+function contains(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+function forEach(obj, f) {
+    for (var key in obj) {
+        if (contains(obj, key)) {
+            f(key, obj[key]);
+        }
+    }
+}
+function clone(obj) {
+    if (obj == null) {
+        return {};
+    }
+    var c = {};
+    forEach(obj, function (key, val) {
+        c[key] = val;
+    });
+    return c;
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @fileoverview Implements the promise abstraction interface for external
+ * (public SDK) packaging, which just passes through to the firebase-app impl.
+ */
+/**
+ * @template T
+ * @param {function((function(T): void),
+ *                  (function(!Error): void))} resolver
+ */
+function make(resolver) {
+    return new Promise(resolver);
+}
+/**
+ * @template T
+ */
+function resolve(value) {
+    return Promise.resolve(value);
+}
+function reject(error) {
+    return Promise.reject(error);
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @return False if the object is undefined or null, true otherwise.
+ */
+function isDef(p) {
+    return p != null;
+}
+function isJustDef(p) {
+    return p !== void 0;
+}
+function isFunction(p) {
+    return typeof p === 'function';
+}
+function isObject(p) {
+    return typeof p === 'object';
+}
+function isNonNullObject(p) {
+    return isObject(p) && p !== null;
+}
+function isNonArrayObject(p) {
+    return isObject(p) && !Array.isArray(p);
+}
+function isString(p) {
+    return typeof p === 'string' || p instanceof String;
+}
+function isNumber(p) {
+    return typeof p === 'number' || p instanceof Number;
+}
+function isNativeBlob(p) {
+    return isNativeBlobDefined() && p instanceof Blob;
+}
+function isNativeBlobDefined() {
+    return typeof Blob !== 'undefined';
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @enum{number}
+ */
+var ErrorCode;
+(function (ErrorCode) {
+    ErrorCode[ErrorCode["NO_ERROR"] = 0] = "NO_ERROR";
+    ErrorCode[ErrorCode["NETWORK_ERROR"] = 1] = "NETWORK_ERROR";
+    ErrorCode[ErrorCode["ABORT"] = 2] = "ABORT";
+})(ErrorCode || (ErrorCode = {}));
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * We use this instead of goog.net.XhrIo because goog.net.XhrIo is hyuuuuge and
+ * doesn't work in React Native on Android.
+ */
+var NetworkXhrIo = /** @class */ (function () {
+    function NetworkXhrIo() {
+        var _this = this;
+        this.sent_ = false;
+        this.xhr_ = new XMLHttpRequest();
+        this.errorCode_ = ErrorCode.NO_ERROR;
+        this.sendPromise_ = make(function (resolve$$1, reject$$1) {
+            _this.xhr_.addEventListener('abort', function (event) {
+                _this.errorCode_ = ErrorCode.ABORT;
+                resolve$$1(_this);
+            });
+            _this.xhr_.addEventListener('error', function (event) {
+                _this.errorCode_ = ErrorCode.NETWORK_ERROR;
+                resolve$$1(_this);
+            });
+            _this.xhr_.addEventListener('load', function (event) {
+                resolve$$1(_this);
+            });
+        });
+    }
+    /**
+     * @override
+     */
+    NetworkXhrIo.prototype.send = function (url, method, opt_body, opt_headers) {
+        var _this = this;
+        if (this.sent_) {
+            throw internalError('cannot .send() more than once');
+        }
+        this.sent_ = true;
+        this.xhr_.open(method, url, true);
+        if (isDef(opt_headers)) {
+            var headers = opt_headers;
+            forEach(headers, function (key, val) {
+                _this.xhr_.setRequestHeader(key, val.toString());
+            });
+        }
+        if (isDef(opt_body)) {
+            this.xhr_.send(opt_body);
+        }
+        else {
+            this.xhr_.send();
+        }
+        return this.sendPromise_;
+    };
+    /**
+     * @override
+     */
+    NetworkXhrIo.prototype.getErrorCode = function () {
+        if (!this.sent_) {
+            throw internalError('cannot .getErrorCode() before sending');
+        }
+        return this.errorCode_;
+    };
+    /**
+     * @override
+     */
+    NetworkXhrIo.prototype.getStatus = function () {
+        if (!this.sent_) {
+            throw internalError('cannot .getStatus() before sending');
+        }
+        try {
+            return this.xhr_.status;
+        }
+        catch (e) {
+            return -1;
+        }
+    };
+    /**
+     * @override
+     */
+    NetworkXhrIo.prototype.getResponseText = function () {
+        if (!this.sent_) {
+            throw internalError('cannot .getResponseText() before sending');
+        }
+        return this.xhr_.responseText;
+    };
+    /**
+     * Aborts the request.
+     * @override
+     */
+    NetworkXhrIo.prototype.abort = function () {
+        this.xhr_.abort();
+    };
+    /**
+     * @override
+     */
+    NetworkXhrIo.prototype.getResponseHeader = function (header) {
+        return this.xhr_.getResponseHeader(header);
+    };
+    /**
+     * @override
+     */
+    NetworkXhrIo.prototype.addUploadProgressListener = function (listener) {
+        if (isDef(this.xhr_.upload)) {
+            this.xhr_.upload.addEventListener('progress', listener);
+        }
+    };
+    /**
+     * @override
+     */
+    NetworkXhrIo.prototype.removeUploadProgressListener = function (listener) {
+        if (isDef(this.xhr_.upload)) {
+            this.xhr_.upload.removeEventListener('progress', listener);
+        }
+    };
+    return NetworkXhrIo;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Factory-like class for creating XhrIo instances.
+ */
+var XhrIoPool = /** @class */ (function () {
+    function XhrIoPool() {
+    }
+    XhrIoPool.prototype.createXhrIo = function () {
+        return new NetworkXhrIo();
+    };
+    return XhrIoPool;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Returns the Object resulting from parsing the given JSON, or null if the
+ * given string does not represent a JSON object.
+ */
+function jsonObjectOrNull(s) {
+    var obj;
+    try {
+        obj = JSON.parse(s);
+    }
+    catch (e) {
+        return null;
+    }
+    if (isNonArrayObject(obj)) {
+        return obj;
+    }
+    else {
+        return null;
+    }
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @struct
+ */
+var Location = /** @class */ (function () {
+    function Location(bucket, path) {
+        this.bucket = bucket;
+        this.path_ = path;
+    }
+    Object.defineProperty(Location.prototype, "path", {
+        get: function () {
+            return this.path_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Location.prototype.fullServerUrl = function () {
+        var encode = encodeURIComponent;
+        return '/b/' + encode(this.bucket) + '/o/' + encode(this.path);
+    };
+    Location.prototype.bucketOnlyServerUrl = function () {
+        var encode = encodeURIComponent;
+        return '/b/' + encode(this.bucket) + '/o';
+    };
+    Location.makeFromBucketSpec = function (bucketString) {
+        var bucketLocation;
+        try {
+            bucketLocation = Location.makeFromUrl(bucketString);
+        }
+        catch (e) {
+            // Not valid URL, use as-is. This lets you put bare bucket names in
+            // config.
+            return new Location(bucketString, '');
+        }
+        if (bucketLocation.path === '') {
+            return bucketLocation;
+        }
+        else {
+            throw invalidDefaultBucket(bucketString);
+        }
+    };
+    Location.makeFromUrl = function (url) {
+        var location = null;
+        var bucketDomain = '([A-Za-z0-9.\\-]+)';
+        function gsModify(loc) {
+            if (loc.path.charAt(loc.path.length - 1) === '/') {
+                loc.path_ = loc.path_.slice(0, -1);
+            }
+        }
+        var gsPath = '(/(.*))?$';
+        var path = '(/([^?#]*).*)?$';
+        var gsRegex = new RegExp('^gs://' + bucketDomain + gsPath, 'i');
+        var gsIndices = { bucket: 1, path: 3 };
+        function httpModify(loc) {
+            loc.path_ = decodeURIComponent(loc.path);
+        }
+        var version = 'v[A-Za-z0-9_]+';
+        var httpRegex = new RegExp('^https?://firebasestorage\\.googleapis\\.com/' +
+            version +
+            '/b/' +
+            bucketDomain +
+            '/o' +
+            path, 'i');
+        var httpIndices = { bucket: 1, path: 3 };
+        var groups = [
+            { regex: gsRegex, indices: gsIndices, postModify: gsModify },
+            { regex: httpRegex, indices: httpIndices, postModify: httpModify }
+        ];
+        for (var i = 0; i < groups.length; i++) {
+            var group = groups[i];
+            var captures = group.regex.exec(url);
+            if (captures) {
+                var bucketValue = captures[group.indices.bucket];
+                var pathValue = captures[group.indices.path];
+                if (!pathValue) {
+                    pathValue = '';
+                }
+                location = new Location(bucketValue, pathValue);
+                group.postModify(location);
+                break;
+            }
+        }
+        if (location == null) {
+            throw invalidUrl(url);
+        }
+        return location;
+    };
+    return Location;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @fileoverview Contains helper methods for manipulating paths.
+ */
+/**
+ * @return Null if the path is already at the root.
+ */
+function parent(path) {
+    if (path.length == 0) {
+        return null;
+    }
+    var index = path.lastIndexOf('/');
+    if (index === -1) {
+        return '';
+    }
+    var newPath = path.slice(0, index);
+    return newPath;
+}
+function child(path, childPath) {
+    var canonicalChildPath = childPath
+        .split('/')
+        .filter(function (component) {
+        return component.length > 0;
+    })
+        .join('/');
+    if (path.length === 0) {
+        return canonicalChildPath;
+    }
+    else {
+        return path + '/' + canonicalChildPath;
+    }
+}
+/**
+ * Returns the last component of a path.
+ * '/foo/bar' -> 'bar'
+ * '/foo/bar/baz/' -> 'baz/'
+ * '/a' -> 'a'
+ */
+function lastComponent(path) {
+    var index = path.lastIndexOf('/', path.length - 2);
+    if (index === -1) {
+        return path;
+    }
+    else {
+        return path.slice(index + 1);
+    }
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+function makeNormalUrl(urlPart) {
+    return domainBase + apiBaseUrl + urlPart;
+}
+function makeDownloadUrl(urlPart) {
+    return downloadBase + apiBaseUrl + urlPart;
+}
+function makeUploadUrl(urlPart) {
+    return domainBase + apiUploadBaseUrl + urlPart;
+}
+function makeQueryString(params) {
+    var encode = encodeURIComponent;
+    var queryPart = '?';
+    forEach(params, function (key, val) {
+        var nextPart = encode(key) + '=' + encode(val);
+        queryPart = queryPart + nextPart + '&';
+    });
+    // Chop off the extra '&' or '?' on the end
+    queryPart = queryPart.slice(0, -1);
+    return queryPart;
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+function noXform_(metadata, value) {
+    return value;
+}
+/**
+ * @struct
+ */
+var Mapping = /** @class */ (function () {
+    function Mapping(server, opt_local, opt_writable, opt_xform) {
+        this.server = server;
+        this.local = opt_local || server;
+        this.writable = !!opt_writable;
+        this.xform = opt_xform || noXform_;
+    }
+    return Mapping;
+}());
+var mappings_ = null;
+function xformPath(fullPath) {
+    var valid = isString(fullPath);
+    if (!valid || fullPath.length < 2) {
+        return fullPath;
+    }
+    else {
+        fullPath = fullPath;
+        return lastComponent(fullPath);
+    }
+}
+function getMappings() {
+    if (mappings_) {
+        return mappings_;
+    }
+    var mappings = [];
+    mappings.push(new Mapping('bucket'));
+    mappings.push(new Mapping('generation'));
+    mappings.push(new Mapping('metageneration'));
+    mappings.push(new Mapping('name', 'fullPath', true));
+    function mappingsXformPath(metadata, fullPath) {
+        return xformPath(fullPath);
+    }
+    var nameMapping = new Mapping('name');
+    nameMapping.xform = mappingsXformPath;
+    mappings.push(nameMapping);
+    /**
+     * Coerces the second param to a number, if it is defined.
+     */
+    function xformSize(metadata, size) {
+        if (isDef(size)) {
+            return +size;
+        }
+        else {
+            return size;
+        }
+    }
+    var sizeMapping = new Mapping('size');
+    sizeMapping.xform = xformSize;
+    mappings.push(sizeMapping);
+    mappings.push(new Mapping('timeCreated'));
+    mappings.push(new Mapping('updated'));
+    mappings.push(new Mapping('md5Hash', null, true));
+    mappings.push(new Mapping('cacheControl', null, true));
+    mappings.push(new Mapping('contentDisposition', null, true));
+    mappings.push(new Mapping('contentEncoding', null, true));
+    mappings.push(new Mapping('contentLanguage', null, true));
+    mappings.push(new Mapping('contentType', null, true));
+    mappings.push(new Mapping('metadata', 'customMetadata', true));
+    mappings_ = mappings;
+    return mappings_;
+}
+function addRef(metadata, authWrapper) {
+    function generateRef() {
+        var bucket = metadata['bucket'];
+        var path = metadata['fullPath'];
+        var loc = new Location(bucket, path);
+        return authWrapper.makeStorageReference(loc);
+    }
+    Object.defineProperty(metadata, 'ref', { get: generateRef });
+}
+function fromResource(authWrapper, resource, mappings) {
+    var metadata = {};
+    metadata['type'] = 'file';
+    var len = mappings.length;
+    for (var i = 0; i < len; i++) {
+        var mapping = mappings[i];
+        metadata[mapping.local] = mapping.xform(metadata, resource[mapping.server]);
+    }
+    addRef(metadata, authWrapper);
+    return metadata;
+}
+function fromResourceString(authWrapper, resourceString, mappings) {
+    var obj = jsonObjectOrNull(resourceString);
+    if (obj === null) {
+        return null;
+    }
+    var resource = obj;
+    return fromResource(authWrapper, resource, mappings);
+}
+function downloadUrlFromResourceString(metadata, resourceString) {
+    var obj = jsonObjectOrNull(resourceString);
+    if (obj === null) {
+        return null;
+    }
+    if (!isString(obj['downloadTokens'])) {
+        // This can happen if objects are uploaded through GCS and retrieved
+        // through list, so we don't want to throw an Error.
+        return null;
+    }
+    var tokens = obj['downloadTokens'];
+    if (tokens.length === 0) {
+        return null;
+    }
+    var encode = encodeURIComponent;
+    var tokensList = tokens.split(',');
+    var urls = tokensList.map(function (token) {
+        var bucket = metadata['bucket'];
+        var path = metadata['fullPath'];
+        var urlPart = '/b/' + encode(bucket) + '/o/' + encode(path);
+        var base = makeDownloadUrl(urlPart);
+        var queryString = makeQueryString({
+            alt: 'media',
+            token: token
+        });
+        return base + queryString;
+    });
+    return urls[0];
+}
+function toResourceString(metadata, mappings) {
+    var resource = {};
+    var len = mappings.length;
+    for (var i = 0; i < len; i++) {
+        var mapping = mappings[i];
+        if (mapping.writable) {
+            resource[mapping.server] = metadata[mapping.local];
+        }
+    }
+    return JSON.stringify(resource);
+}
+function metadataValidator(p) {
+    var validType = p && isObject(p);
+    if (!validType) {
+        throw 'Expected Metadata object.';
+    }
+    for (var key in p) {
+        var val = p[key];
+        if (key === 'customMetadata') {
+            if (!isObject(val)) {
+                throw 'Expected object for \'customMetadata\' mapping.';
+            }
+        }
+        else {
+            if (isNonNullObject(val)) {
+                throw "Mapping for '" + key + "' cannot be an object.";
+            }
+        }
+    }
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @param name Name of the function.
+ * @param specs Argument specs.
+ * @param passed The actual arguments passed to the function.
+ * @throws {fbs.Error} If the arguments are invalid.
+ */
+function validate(name, specs, passed) {
+    var minArgs = specs.length;
+    var maxArgs = specs.length;
+    for (var i = 0; i < specs.length; i++) {
+        if (specs[i].optional) {
+            minArgs = i;
+            break;
+        }
+    }
+    var validLength = minArgs <= passed.length && passed.length <= maxArgs;
+    if (!validLength) {
+        throw invalidArgumentCount(minArgs, maxArgs, name, passed.length);
+    }
+    for (var i = 0; i < passed.length; i++) {
+        try {
+            specs[i].validator(passed[i]);
+        }
+        catch (e) {
+            if (e instanceof Error) {
+                throw invalidArgument(i, name, e.message);
+            }
+            else {
+                throw invalidArgument(i, name, e);
+            }
+        }
+    }
+}
+/**
+ * @struct
+ */
+var ArgSpec = /** @class */ (function () {
+    function ArgSpec(validator, opt_optional) {
+        var self = this;
+        this.validator = function (p) {
+            if (self.optional && !isJustDef(p)) {
+                return;
+            }
+            validator(p);
+        };
+        this.optional = !!opt_optional;
+    }
+    return ArgSpec;
+}());
+function and_(v1, v2) {
+    return function (p) {
+        v1(p);
+        v2(p);
+    };
+}
+function stringSpec(opt_validator, opt_optional) {
+    function stringValidator(p) {
+        if (!isString(p)) {
+            throw 'Expected string.';
+        }
+    }
+    var validator;
+    if (opt_validator) {
+        validator = and_(stringValidator, opt_validator);
+    }
+    else {
+        validator = stringValidator;
+    }
+    return new ArgSpec(validator, opt_optional);
+}
+function uploadDataSpec() {
+    function validator(p) {
+        var valid = p instanceof Uint8Array ||
+            p instanceof ArrayBuffer ||
+            (isNativeBlobDefined() && p instanceof Blob);
+        if (!valid) {
+            throw 'Expected Blob or File.';
+        }
+    }
+    return new ArgSpec(validator);
+}
+function metadataSpec(opt_optional) {
+    return new ArgSpec(metadataValidator, opt_optional);
+}
+function nonNegativeNumberSpec() {
+    function validator(p) {
+        var valid = isNumber(p) && p >= 0;
+        if (!valid) {
+            throw 'Expected a number 0 or greater.';
+        }
+    }
+    return new ArgSpec(validator);
+}
+function looseObjectSpec(opt_validator, opt_optional) {
+    function validator(p) {
+        var isLooseObject = p === null || (isDef(p) && p instanceof Object);
+        if (!isLooseObject) {
+            throw 'Expected an Object.';
+        }
+        if (opt_validator !== undefined && opt_validator !== null) {
+            opt_validator(p);
+        }
+    }
+    return new ArgSpec(validator, opt_optional);
+}
+function nullFunctionSpec(opt_optional) {
+    function validator(p) {
+        var valid = p === null || isFunction(p);
+        if (!valid) {
+            throw 'Expected a Function.';
+        }
+    }
+    return new ArgSpec(validator, opt_optional);
+}
+
+function getBlobBuilder() {
+    if (typeof BlobBuilder !== 'undefined') {
+        return BlobBuilder;
+    }
+    else if (typeof WebKitBlobBuilder !== 'undefined') {
+        return WebKitBlobBuilder;
+    }
+    else {
+        return undefined;
+    }
+}
+/**
+ * Concatenates one or more values together and converts them to a Blob.
+ *
+ * @param var_args The values that will make up the resulting blob.
+ * @return The blob.
+ */
+function getBlob() {
+    var var_args = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        var_args[_i] = arguments[_i];
+    }
+    var BlobBuilder = getBlobBuilder();
+    if (BlobBuilder !== undefined) {
+        var bb = new BlobBuilder();
+        for (var i = 0; i < var_args.length; i++) {
+            bb.append(var_args[i]);
+        }
+        return bb.getBlob();
+    }
+    else {
+        if (isNativeBlobDefined()) {
+            return new Blob(var_args);
+        }
+        else {
+            throw Error("This browser doesn't seem to support creating Blobs");
+        }
+    }
+}
+/**
+ * Slices the blob. The returned blob contains data from the start byte
+ * (inclusive) till the end byte (exclusive). Negative indices cannot be used.
+ *
+ * @param blob The blob to be sliced.
+ * @param start Index of the starting byte.
+ * @param end Index of the ending byte.
+ * @return The blob slice or null if not supported.
+ */
+function sliceBlob(blob, start, end) {
+    if (blob.webkitSlice) {
+        return blob.webkitSlice(start, end);
+    }
+    else if (blob.mozSlice) {
+        return blob.mozSlice(start, end);
+    }
+    else if (blob.slice) {
+        return blob.slice(start, end);
+    }
+    return null;
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @param opt_elideCopy If true, doesn't copy mutable input data
+ *     (e.g. Uint8Arrays). Pass true only if you know the objects will not be
+ *     modified after this blob's construction.
+ */
+var FbsBlob = /** @class */ (function () {
+    function FbsBlob(data, opt_elideCopy) {
+        var size = 0;
+        var blobType = '';
+        if (isNativeBlob(data)) {
+            this.data_ = data;
+            size = data.size;
+            blobType = data.type;
+        }
+        else if (data instanceof ArrayBuffer) {
+            if (opt_elideCopy) {
+                this.data_ = new Uint8Array(data);
+            }
+            else {
+                this.data_ = new Uint8Array(data.byteLength);
+                this.data_.set(new Uint8Array(data));
+            }
+            size = this.data_.length;
+        }
+        else if (data instanceof Uint8Array) {
+            if (opt_elideCopy) {
+                this.data_ = data;
+            }
+            else {
+                this.data_ = new Uint8Array(data.length);
+                this.data_.set(data);
+            }
+            size = data.length;
+        }
+        this.size_ = size;
+        this.type_ = blobType;
+    }
+    FbsBlob.prototype.size = function () {
+        return this.size_;
+    };
+    FbsBlob.prototype.type = function () {
+        return this.type_;
+    };
+    FbsBlob.prototype.slice = function (startByte, endByte) {
+        if (isNativeBlob(this.data_)) {
+            var realBlob = this.data_;
+            var sliced = sliceBlob(realBlob, startByte, endByte);
+            if (sliced === null) {
+                return null;
+            }
+            return new FbsBlob(sliced);
+        }
+        else {
+            var slice = new Uint8Array(this.data_.buffer, startByte, endByte - startByte);
+            return new FbsBlob(slice, true);
+        }
+    };
+    FbsBlob.getBlob = function () {
+        var var_args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            var_args[_i] = arguments[_i];
+        }
+        if (isNativeBlobDefined()) {
+            var blobby = var_args.map(function (val) {
+                if (val instanceof FbsBlob) {
+                    return val.data_;
+                }
+                else {
+                    return val;
+                }
+            });
+            return new FbsBlob(getBlob.apply(null, blobby));
+        }
+        else {
+            var uint8Arrays = var_args.map(function (val) {
+                if (isString(val)) {
+                    return dataFromString(StringFormat.RAW, val).data;
+                }
+                else {
+                    // Blobs don't exist, so this has to be a Uint8Array.
+                    return val.data_;
+                }
+            });
+            var finalLength_1 = 0;
+            uint8Arrays.forEach(function (array) {
+                finalLength_1 += array.byteLength;
+            });
+            var merged_1 = new Uint8Array(finalLength_1);
+            var index_1 = 0;
+            uint8Arrays.forEach(function (array) {
+                for (var i = 0; i < array.length; i++) {
+                    merged_1[index_1++] = array[i];
+                }
+            });
+            return new FbsBlob(merged_1, true);
+        }
+    };
+    FbsBlob.prototype.uploadData = function () {
+        return this.data_;
+    };
+    return FbsBlob;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Returns true if the object is contained in the array (compared with ===).
+ * @template T
+ */
+function contains$1(array, elem) {
+    return array.indexOf(elem) !== -1;
+}
+/**
+ * Returns a shallow copy of the array or array-like object (e.g. arguments).
+ * @template T
+ */
+function clone$1(arraylike) {
+    return Array.prototype.slice.call(arraylike);
+}
+/**
+ * Removes the given element from the given array, if it is contained.
+ * Directly modifies the passed-in array.
+ * @template T
+ */
+function remove(array, elem) {
+    var i = array.indexOf(elem);
+    if (i !== -1) {
+        array.splice(i, 1);
+    }
+}
+
+var RequestInfo = /** @class */ (function () {
+    function RequestInfo(url, method, 
+    /**
+     * Returns the value with which to resolve the request's promise. Only called
+     * if the request is successful. Throw from this function to reject the
+     * returned Request's promise with the thrown error.
+     * Note: The XhrIo passed to this function may be reused after this callback
+     * returns. Do not keep a reference to it in any way.
+     */
+    handler, timeout) {
+        this.url = url;
+        this.method = method;
+        this.handler = handler;
+        this.timeout = timeout;
+        this.urlParams = {};
+        this.headers = {};
+        this.body = null;
+        this.errorHandler = null;
+        /**
+         * Called with the current number of bytes uploaded and total size (-1 if not
+         * computable) of the request body (i.e. used to report upload progress).
+         */
+        this.progressCallback = null;
+        this.successCodes = [200];
+        this.additionalRetryCodes = [];
+    }
+    return RequestInfo;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Throws the UNKNOWN FirebaseStorageError if cndn is false.
+ */
+function handlerCheck(cndn) {
+    if (!cndn) {
+        throw unknown();
+    }
+}
+function metadataHandler(authWrapper, mappings) {
+    function handler(xhr, text) {
+        var metadata = fromResourceString(authWrapper, text, mappings);
+        handlerCheck(metadata !== null);
+        return metadata;
+    }
+    return handler;
+}
+function downloadUrlHandler(authWrapper, mappings) {
+    function handler(xhr, text) {
+        var metadata = fromResourceString(authWrapper, text, mappings);
+        handlerCheck(metadata !== null);
+        return downloadUrlFromResourceString(metadata, text);
+    }
+    return handler;
+}
+function sharedErrorHandler(location) {
+    function errorHandler(xhr, err) {
+        var newErr;
+        if (xhr.getStatus() === 401) {
+            newErr = unauthenticated();
+        }
+        else {
+            if (xhr.getStatus() === 402) {
+                newErr = quotaExceeded(location.bucket);
+            }
+            else {
+                if (xhr.getStatus() === 403) {
+                    newErr = unauthorized(location.path);
+                }
+                else {
+                    newErr = err;
+                }
+            }
+        }
+        newErr.setServerResponseProp(err.serverResponseProp());
+        return newErr;
+    }
+    return errorHandler;
+}
+function objectErrorHandler(location) {
+    var shared = sharedErrorHandler(location);
+    function errorHandler(xhr, err) {
+        var newErr = shared(xhr, err);
+        if (xhr.getStatus() === 404) {
+            newErr = objectNotFound(location.path);
+        }
+        newErr.setServerResponseProp(err.serverResponseProp());
+        return newErr;
+    }
+    return errorHandler;
+}
+function getMetadata(authWrapper, location, mappings) {
+    var urlPart = location.fullServerUrl();
+    var url = makeNormalUrl(urlPart);
+    var method = 'GET';
+    var timeout = authWrapper.maxOperationRetryTime();
+    var requestInfo = new RequestInfo(url, method, metadataHandler(authWrapper, mappings), timeout);
+    requestInfo.errorHandler = objectErrorHandler(location);
+    return requestInfo;
+}
+function getDownloadUrl(authWrapper, location, mappings) {
+    var urlPart = location.fullServerUrl();
+    var url = makeNormalUrl(urlPart);
+    var method = 'GET';
+    var timeout = authWrapper.maxOperationRetryTime();
+    var requestInfo = new RequestInfo(url, method, downloadUrlHandler(authWrapper, mappings), timeout);
+    requestInfo.errorHandler = objectErrorHandler(location);
+    return requestInfo;
+}
+function updateMetadata(authWrapper, location, metadata, mappings) {
+    var urlPart = location.fullServerUrl();
+    var url = makeNormalUrl(urlPart);
+    var method = 'PATCH';
+    var body = toResourceString(metadata, mappings);
+    var headers = { 'Content-Type': 'application/json; charset=utf-8' };
+    var timeout = authWrapper.maxOperationRetryTime();
+    var requestInfo = new RequestInfo(url, method, metadataHandler(authWrapper, mappings), timeout);
+    requestInfo.headers = headers;
+    requestInfo.body = body;
+    requestInfo.errorHandler = objectErrorHandler(location);
+    return requestInfo;
+}
+function deleteObject(authWrapper, location) {
+    var urlPart = location.fullServerUrl();
+    var url = makeNormalUrl(urlPart);
+    var method = 'DELETE';
+    var timeout = authWrapper.maxOperationRetryTime();
+    function handler(xhr, text) { }
+    var requestInfo = new RequestInfo(url, method, handler, timeout);
+    requestInfo.successCodes = [200, 204];
+    requestInfo.errorHandler = objectErrorHandler(location);
+    return requestInfo;
+}
+function determineContentType_(metadata, blob) {
+    return ((metadata && metadata['contentType']) ||
+        (blob && blob.type()) ||
+        'application/octet-stream');
+}
+function metadataForUpload_(location, blob, opt_metadata) {
+    var metadata = clone(opt_metadata);
+    metadata['fullPath'] = location.path;
+    metadata['size'] = blob.size();
+    if (!metadata['contentType']) {
+        metadata['contentType'] = determineContentType_(null, blob);
+    }
+    return metadata;
+}
+function multipartUpload(authWrapper, location, mappings, blob, opt_metadata) {
+    var urlPart = location.bucketOnlyServerUrl();
+    var headers = {
+        'X-Goog-Upload-Protocol': 'multipart'
+    };
+    function genBoundary() {
+        var str = '';
+        for (var i = 0; i < 2; i++) {
+            str =
+                str +
+                    Math.random()
+                        .toString()
+                        .slice(2);
+        }
+        return str;
+    }
+    var boundary = genBoundary();
+    headers['Content-Type'] = 'multipart/related; boundary=' + boundary;
+    var metadata = metadataForUpload_(location, blob, opt_metadata);
+    var metadataString = toResourceString(metadata, mappings);
+    var preBlobPart = '--' +
+        boundary +
+        '\r\n' +
+        'Content-Type: application/json; charset=utf-8\r\n\r\n' +
+        metadataString +
+        '\r\n--' +
+        boundary +
+        '\r\n' +
+        'Content-Type: ' +
+        metadata['contentType'] +
+        '\r\n\r\n';
+    var postBlobPart = '\r\n--' + boundary + '--';
+    var body = FbsBlob.getBlob(preBlobPart, blob, postBlobPart);
+    if (body === null) {
+        throw cannotSliceBlob();
+    }
+    var urlParams = { name: metadata['fullPath'] };
+    var url = makeUploadUrl(urlPart);
+    var method = 'POST';
+    var timeout = authWrapper.maxUploadRetryTime();
+    var requestInfo = new RequestInfo(url, method, metadataHandler(authWrapper, mappings), timeout);
+    requestInfo.urlParams = urlParams;
+    requestInfo.headers = headers;
+    requestInfo.body = body.uploadData();
+    requestInfo.errorHandler = sharedErrorHandler(location);
+    return requestInfo;
+}
+/**
+ * @param current The number of bytes that have been uploaded so far.
+ * @param total The total number of bytes in the upload.
+ * @param opt_finalized True if the server has finished the upload.
+ * @param opt_metadata The upload metadata, should
+ *     only be passed if opt_finalized is true.
+ * @struct
+ */
+var ResumableUploadStatus = /** @class */ (function () {
+    function ResumableUploadStatus(current, total, finalized, metadata) {
+        this.current = current;
+        this.total = total;
+        this.finalized = !!finalized;
+        this.metadata = metadata || null;
+    }
+    return ResumableUploadStatus;
+}());
+function checkResumeHeader_(xhr, opt_allowed) {
+    var status;
+    try {
+        status = xhr.getResponseHeader('X-Goog-Upload-Status');
+    }
+    catch (e) {
+        handlerCheck(false);
+    }
+    var allowed = opt_allowed || ['active'];
+    handlerCheck(contains$1(allowed, status));
+    return status;
+}
+function createResumableUpload(authWrapper, location, mappings, blob, opt_metadata) {
+    var urlPart = location.bucketOnlyServerUrl();
+    var metadata = metadataForUpload_(location, blob, opt_metadata);
+    var urlParams = { name: metadata['fullPath'] };
+    var url = makeUploadUrl(urlPart);
+    var method = 'POST';
+    var headers = {
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': blob.size(),
+        'X-Goog-Upload-Header-Content-Type': metadata['contentType'],
+        'Content-Type': 'application/json; charset=utf-8'
+    };
+    var body = toResourceString(metadata, mappings);
+    var timeout = authWrapper.maxUploadRetryTime();
+    function handler(xhr, text) {
+        checkResumeHeader_(xhr);
+        var url;
+        try {
+            url = xhr.getResponseHeader('X-Goog-Upload-URL');
+        }
+        catch (e) {
+            handlerCheck(false);
+        }
+        handlerCheck(isString(url));
+        return url;
+    }
+    var requestInfo = new RequestInfo(url, method, handler, timeout);
+    requestInfo.urlParams = urlParams;
+    requestInfo.headers = headers;
+    requestInfo.body = body;
+    requestInfo.errorHandler = sharedErrorHandler(location);
+    return requestInfo;
+}
+/**
+ * @param url From a call to fbs.requests.createResumableUpload.
+ */
+function getResumableUploadStatus(authWrapper, location, url, blob) {
+    var headers = { 'X-Goog-Upload-Command': 'query' };
+    function handler(xhr, text) {
+        var status = checkResumeHeader_(xhr, ['active', 'final']);
+        var sizeString;
+        try {
+            sizeString = xhr.getResponseHeader('X-Goog-Upload-Size-Received');
+        }
+        catch (e) {
+            handlerCheck(false);
+        }
+        var size = parseInt(sizeString, 10);
+        handlerCheck(!isNaN(size));
+        return new ResumableUploadStatus(size, blob.size(), status === 'final');
+    }
+    var method = 'POST';
+    var timeout = authWrapper.maxUploadRetryTime();
+    var requestInfo = new RequestInfo(url, method, handler, timeout);
+    requestInfo.headers = headers;
+    requestInfo.errorHandler = sharedErrorHandler(location);
+    return requestInfo;
+}
+/**
+ * Any uploads via the resumable upload API must transfer a number of bytes
+ * that is a multiple of this number.
+ */
+var resumableUploadChunkSize = 256 * 1024;
+/**
+ * @param url From a call to fbs.requests.createResumableUpload.
+ * @param chunkSize Number of bytes to upload.
+ * @param opt_status The previous status.
+ *     If not passed or null, we start from the beginning.
+ * @throws fbs.Error If the upload is already complete, the passed in status
+ *     has a final size inconsistent with the blob, or the blob cannot be sliced
+ *     for upload.
+ */
+function continueResumableUpload(location, authWrapper, url, blob, chunkSize, mappings, opt_status, opt_progressCallback) {
+    // TODO(andysoto): standardize on internal asserts
+    // assert(!(opt_status && opt_status.finalized));
+    var status = new ResumableUploadStatus(0, 0);
+    if (opt_status) {
+        status.current = opt_status.current;
+        status.total = opt_status.total;
+    }
+    else {
+        status.current = 0;
+        status.total = blob.size();
+    }
+    if (blob.size() !== status.total) {
+        throw serverFileWrongSize();
+    }
+    var bytesLeft = status.total - status.current;
+    var bytesToUpload = bytesLeft;
+    if (chunkSize > 0) {
+        bytesToUpload = Math.min(bytesToUpload, chunkSize);
+    }
+    var startByte = status.current;
+    var endByte = startByte + bytesToUpload;
+    var uploadCommand = bytesToUpload === bytesLeft ? 'upload, finalize' : 'upload';
+    var headers = {
+        'X-Goog-Upload-Command': uploadCommand,
+        'X-Goog-Upload-Offset': status.current
+    };
+    var body = blob.slice(startByte, endByte);
+    if (body === null) {
+        throw cannotSliceBlob();
+    }
+    function handler(xhr, text) {
+        // TODO(andysoto): Verify the MD5 of each uploaded range:
+        // the 'x-range-md5' header comes back with status code 308 responses.
+        // We'll only be able to bail out though, because you can't re-upload a
+        // range that you previously uploaded.
+        var uploadStatus = checkResumeHeader_(xhr, ['active', 'final']);
+        var newCurrent = status.current + bytesToUpload;
+        var size = blob.size();
+        var metadata;
+        if (uploadStatus === 'final') {
+            metadata = metadataHandler(authWrapper, mappings)(xhr, text);
+        }
+        else {
+            metadata = null;
+        }
+        return new ResumableUploadStatus(newCurrent, size, uploadStatus === 'final', metadata);
+    }
+    var method = 'POST';
+    var timeout = authWrapper.maxUploadRetryTime();
+    var requestInfo = new RequestInfo(url, method, handler, timeout);
+    requestInfo.headers = headers;
+    requestInfo.body = body.uploadData();
+    requestInfo.progressCallback = opt_progressCallback || null;
+    requestInfo.errorHandler = sharedErrorHandler(location);
+    return requestInfo;
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @struct
+ */
+var Observer = /** @class */ (function () {
+    function Observer(nextOrObserver, opt_error, opt_complete) {
+        var asFunctions = isFunction(nextOrObserver) ||
+            isDef(opt_error) ||
+            isDef(opt_complete);
+        if (asFunctions) {
+            this.next = nextOrObserver;
+            this.error = opt_error || null;
+            this.complete = opt_complete || null;
+        }
+        else {
+            var observer = nextOrObserver;
+            this.next = observer.next || null;
+            this.error = observer.error || null;
+            this.complete = observer.complete || null;
+        }
+    }
+    return Observer;
+}());
+
+var UploadTaskSnapshot = /** @class */ (function () {
+    function UploadTaskSnapshot(bytesTransferred, totalBytes, state, metadata, task, ref) {
+        this.bytesTransferred = bytesTransferred;
+        this.totalBytes = totalBytes;
+        this.state = state;
+        this.metadata = metadata;
+        this.task = task;
+        this.ref = ref;
+    }
+    return UploadTaskSnapshot;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Returns a function that invokes f with its arguments asynchronously as a
+ * microtask, i.e. as soon as possible after the current script returns back
+ * into browser code.
+ */
+function async(f) {
+    return function () {
+        var argsToForward = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            argsToForward[_i] = arguments[_i];
+        }
+        resolve(true).then(function () {
+            f.apply(null, argsToForward);
+        });
+    };
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Represents a blob being uploaded. Can be used to pause/resume/cancel the
+ * upload and manage callbacks for various events.
+ */
+var UploadTask = /** @class */ (function () {
+    /**
+     * @param ref The firebaseStorage.Reference object this task came
+     *     from, untyped to avoid cyclic dependencies.
+     * @param blob The blob to upload.
+     */
+    function UploadTask(ref, authWrapper, location, mappings, blob, metadata) {
+        if (metadata === void 0) { metadata = null; }
+        var _this = this;
+        this.transferred_ = 0;
+        this.needToFetchStatus_ = false;
+        this.needToFetchMetadata_ = false;
+        this.observers_ = [];
+        this.error_ = null;
+        this.uploadUrl_ = null;
+        this.request_ = null;
+        this.chunkMultiplier_ = 1;
+        this.resolve_ = null;
+        this.reject_ = null;
+        this.ref_ = ref;
+        this.authWrapper_ = authWrapper;
+        this.location_ = location;
+        this.blob_ = blob;
+        this.metadata_ = metadata;
+        this.mappings_ = mappings;
+        this.resumable_ = this.shouldDoResumable_(this.blob_);
+        this.state_ = InternalTaskState.RUNNING;
+        this.errorHandler_ = function (error) {
+            _this.request_ = null;
+            _this.chunkMultiplier_ = 1;
+            if (error.codeEquals(Code.CANCELED)) {
+                _this.needToFetchStatus_ = true;
+                _this.completeTransitions_();
+            }
+            else {
+                _this.error_ = error;
+                _this.transition_(InternalTaskState.ERROR);
+            }
+        };
+        this.metadataErrorHandler_ = function (error) {
+            _this.request_ = null;
+            if (error.codeEquals(Code.CANCELED)) {
+                _this.completeTransitions_();
+            }
+            else {
+                _this.error_ = error;
+                _this.transition_(InternalTaskState.ERROR);
+            }
+        };
+        this.promise_ = make(function (resolve$$1, reject$$1) {
+            _this.resolve_ = resolve$$1;
+            _this.reject_ = reject$$1;
+            _this.start_();
+        });
+        // Prevent uncaught rejections on the internal promise from bubbling out
+        // to the top level with a dummy handler.
+        this.promise_.then(null, function () { });
+    }
+    UploadTask.prototype.makeProgressCallback_ = function () {
+        var _this = this;
+        var sizeBefore = this.transferred_;
+        return function (loaded, total) {
+            _this.updateProgress_(sizeBefore + loaded);
+        };
+    };
+    UploadTask.prototype.shouldDoResumable_ = function (blob) {
+        return blob.size() > 256 * 1024;
+    };
+    UploadTask.prototype.start_ = function () {
+        if (this.state_ !== InternalTaskState.RUNNING) {
+            // This can happen if someone pauses us in a resume callback, for example.
+            return;
+        }
+        if (this.request_ !== null) {
+            return;
+        }
+        if (this.resumable_) {
+            if (this.uploadUrl_ === null) {
+                this.createResumable_();
+            }
+            else {
+                if (this.needToFetchStatus_) {
+                    this.fetchStatus_();
+                }
+                else {
+                    if (this.needToFetchMetadata_) {
+                        // Happens if we miss the metadata on upload completion.
+                        this.fetchMetadata_();
+                    }
+                    else {
+                        this.continueUpload_();
+                    }
+                }
+            }
+        }
+        else {
+            this.oneShotUpload_();
+        }
+    };
+    UploadTask.prototype.resolveToken_ = function (callback) {
+        var _this = this;
+        this.authWrapper_.getAuthToken().then(function (authToken) {
+            switch (_this.state_) {
+                case InternalTaskState.RUNNING:
+                    callback(authToken);
+                    break;
+                case InternalTaskState.CANCELING:
+                    _this.transition_(InternalTaskState.CANCELED);
+                    break;
+                case InternalTaskState.PAUSING:
+                    _this.transition_(InternalTaskState.PAUSED);
+                    break;
+                default:
+            }
+        });
+    };
+    // TODO(andysoto): assert false
+    UploadTask.prototype.createResumable_ = function () {
+        var _this = this;
+        this.resolveToken_(function (authToken) {
+            var requestInfo = createResumableUpload(_this.authWrapper_, _this.location_, _this.mappings_, _this.blob_, _this.metadata_);
+            var createRequest = _this.authWrapper_.makeRequest(requestInfo, authToken);
+            _this.request_ = createRequest;
+            createRequest.getPromise().then(function (url) {
+                _this.request_ = null;
+                _this.uploadUrl_ = url;
+                _this.needToFetchStatus_ = false;
+                _this.completeTransitions_();
+            }, _this.errorHandler_);
+        });
+    };
+    UploadTask.prototype.fetchStatus_ = function () {
+        var _this = this;
+        // TODO(andysoto): assert(this.uploadUrl_ !== null);
+        var url = this.uploadUrl_;
+        this.resolveToken_(function (authToken) {
+            var requestInfo = getResumableUploadStatus(_this.authWrapper_, _this.location_, url, _this.blob_);
+            var statusRequest = _this.authWrapper_.makeRequest(requestInfo, authToken);
+            _this.request_ = statusRequest;
+            statusRequest.getPromise().then(function (status) {
+                status = status;
+                _this.request_ = null;
+                _this.updateProgress_(status.current);
+                _this.needToFetchStatus_ = false;
+                if (status.finalized) {
+                    _this.needToFetchMetadata_ = true;
+                }
+                _this.completeTransitions_();
+            }, _this.errorHandler_);
+        });
+    };
+    UploadTask.prototype.continueUpload_ = function () {
+        var _this = this;
+        var chunkSize = resumableUploadChunkSize * this.chunkMultiplier_;
+        var status = new ResumableUploadStatus(this.transferred_, this.blob_.size());
+        // TODO(andysoto): assert(this.uploadUrl_ !== null);
+        var url = this.uploadUrl_;
+        this.resolveToken_(function (authToken) {
+            var requestInfo;
+            try {
+                requestInfo = continueResumableUpload(_this.location_, _this.authWrapper_, url, _this.blob_, chunkSize, _this.mappings_, status, _this.makeProgressCallback_());
+            }
+            catch (e) {
+                _this.error_ = e;
+                _this.transition_(InternalTaskState.ERROR);
+                return;
+            }
+            var uploadRequest = _this.authWrapper_.makeRequest(requestInfo, authToken);
+            _this.request_ = uploadRequest;
+            uploadRequest
+                .getPromise()
+                .then(function (newStatus) {
+                _this.increaseMultiplier_();
+                _this.request_ = null;
+                _this.updateProgress_(newStatus.current);
+                if (newStatus.finalized) {
+                    _this.metadata_ = newStatus.metadata;
+                    _this.transition_(InternalTaskState.SUCCESS);
+                }
+                else {
+                    _this.completeTransitions_();
+                }
+            }, _this.errorHandler_);
+        });
+    };
+    UploadTask.prototype.increaseMultiplier_ = function () {
+        var currentSize = resumableUploadChunkSize * this.chunkMultiplier_;
+        // Max chunk size is 32M.
+        if (currentSize < 32 * 1024 * 1024) {
+            this.chunkMultiplier_ *= 2;
+        }
+    };
+    UploadTask.prototype.fetchMetadata_ = function () {
+        var _this = this;
+        this.resolveToken_(function (authToken) {
+            var requestInfo = getMetadata(_this.authWrapper_, _this.location_, _this.mappings_);
+            var metadataRequest = _this.authWrapper_.makeRequest(requestInfo, authToken);
+            _this.request_ = metadataRequest;
+            metadataRequest.getPromise().then(function (metadata) {
+                _this.request_ = null;
+                _this.metadata_ = metadata;
+                _this.transition_(InternalTaskState.SUCCESS);
+            }, _this.metadataErrorHandler_);
+        });
+    };
+    UploadTask.prototype.oneShotUpload_ = function () {
+        var _this = this;
+        this.resolveToken_(function (authToken) {
+            var requestInfo = multipartUpload(_this.authWrapper_, _this.location_, _this.mappings_, _this.blob_, _this.metadata_);
+            var multipartRequest = _this.authWrapper_.makeRequest(requestInfo, authToken);
+            _this.request_ = multipartRequest;
+            multipartRequest.getPromise().then(function (metadata) {
+                _this.request_ = null;
+                _this.metadata_ = metadata;
+                _this.updateProgress_(_this.blob_.size());
+                _this.transition_(InternalTaskState.SUCCESS);
+            }, _this.errorHandler_);
+        });
+    };
+    UploadTask.prototype.updateProgress_ = function (transferred) {
+        var old = this.transferred_;
+        this.transferred_ = transferred;
+        // A progress update can make the "transferred" value smaller (e.g. a
+        // partial upload not completed by server, after which the "transferred"
+        // value may reset to the value at the beginning of the request).
+        if (this.transferred_ !== old) {
+            this.notifyObservers_();
+        }
+    };
+    UploadTask.prototype.transition_ = function (state) {
+        if (this.state_ === state) {
+            return;
+        }
+        switch (state) {
+            case InternalTaskState.CANCELING:
+                // TODO(andysoto):
+                // assert(this.state_ === InternalTaskState.RUNNING ||
+                //        this.state_ === InternalTaskState.PAUSING);
+                this.state_ = state;
+                if (this.request_ !== null) {
+                    this.request_.cancel();
+                }
+                break;
+            case InternalTaskState.PAUSING:
+                // TODO(andysoto):
+                // assert(this.state_ === InternalTaskState.RUNNING);
+                this.state_ = state;
+                if (this.request_ !== null) {
+                    this.request_.cancel();
+                }
+                break;
+            case InternalTaskState.RUNNING:
+                // TODO(andysoto):
+                // assert(this.state_ === InternalTaskState.PAUSED ||
+                //        this.state_ === InternalTaskState.PAUSING);
+                var wasPaused = this.state_ === InternalTaskState.PAUSED;
+                this.state_ = state;
+                if (wasPaused) {
+                    this.notifyObservers_();
+                    this.start_();
+                }
+                break;
+            case InternalTaskState.PAUSED:
+                // TODO(andysoto):
+                // assert(this.state_ === InternalTaskState.PAUSING);
+                this.state_ = state;
+                this.notifyObservers_();
+                break;
+            case InternalTaskState.CANCELED:
+                // TODO(andysoto):
+                // assert(this.state_ === InternalTaskState.PAUSED ||
+                //        this.state_ === InternalTaskState.CANCELING);
+                this.error_ = canceled();
+                this.state_ = state;
+                this.notifyObservers_();
+                break;
+            case InternalTaskState.ERROR:
+                // TODO(andysoto):
+                // assert(this.state_ === InternalTaskState.RUNNING ||
+                //        this.state_ === InternalTaskState.PAUSING ||
+                //        this.state_ === InternalTaskState.CANCELING);
+                this.state_ = state;
+                this.notifyObservers_();
+                break;
+            case InternalTaskState.SUCCESS:
+                // TODO(andysoto):
+                // assert(this.state_ === InternalTaskState.RUNNING ||
+                //        this.state_ === InternalTaskState.PAUSING ||
+                //        this.state_ === InternalTaskState.CANCELING);
+                this.state_ = state;
+                this.notifyObservers_();
+                break;
+        }
+    };
+    UploadTask.prototype.completeTransitions_ = function () {
+        switch (this.state_) {
+            case InternalTaskState.PAUSING:
+                this.transition_(InternalTaskState.PAUSED);
+                break;
+            case InternalTaskState.CANCELING:
+                this.transition_(InternalTaskState.CANCELED);
+                break;
+            case InternalTaskState.RUNNING:
+                this.start_();
+                break;
+            default:
+                // TODO(andysoto): assert(false);
+                break;
+        }
+    };
+    Object.defineProperty(UploadTask.prototype, "snapshot", {
+        get: function () {
+            var externalState = taskStateFromInternalTaskState(this.state_);
+            return new UploadTaskSnapshot(this.transferred_, this.blob_.size(), externalState, this.metadata_, this, this.ref_);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    /**
+     * Adds a callback for an event.
+     * @param type The type of event to listen for.
+     */
+    UploadTask.prototype.on = function (type, nextOrObserver, error, completed) {
+        if (nextOrObserver === void 0) { nextOrObserver = undefined; }
+        if (error === void 0) { error = undefined; }
+        if (completed === void 0) { completed = undefined; }
+        function typeValidator(_p) {
+            if (type !== TaskEvent.STATE_CHANGED) {
+                throw "Expected one of the event types: [" + TaskEvent.STATE_CHANGED + "].";
+            }
+        }
+        var nextOrObserverMessage = 'Expected a function or an Object with one of ' +
+            '`next`, `error`, `complete` properties.';
+        var nextValidator = nullFunctionSpec(true).validator;
+        var observerValidator = looseObjectSpec(null, true).validator;
+        function nextOrObserverValidator(p) {
+            try {
+                nextValidator(p);
+                return;
+            }
+            catch (e) { }
+            try {
+                observerValidator(p);
+                var anyDefined = isJustDef(p['next']) ||
+                    isJustDef(p['error']) ||
+                    isJustDef(p['complete']);
+                if (!anyDefined) {
+                    throw '';
+                }
+                return;
+            }
+            catch (e) {
+                throw nextOrObserverMessage;
+            }
+        }
+        var specs = [
+            stringSpec(typeValidator),
+            looseObjectSpec(nextOrObserverValidator, true),
+            nullFunctionSpec(true),
+            nullFunctionSpec(true)
+        ];
+        validate('on', specs, arguments);
+        var self = this;
+        function makeBinder(specs) {
+            function binder(nextOrObserver, error, opt_complete) {
+                if (specs !== null) {
+                    validate('on', specs, arguments);
+                }
+                var observer = new Observer(nextOrObserver, error, completed);
+                self.addObserver_(observer);
+                return function () {
+                    self.removeObserver_(observer);
+                };
+            }
+            return binder;
+        }
+        function binderNextOrObserverValidator(p) {
+            if (p === null) {
+                throw nextOrObserverMessage;
+            }
+            nextOrObserverValidator(p);
+        }
+        var binderSpecs = [
+            looseObjectSpec(binderNextOrObserverValidator),
+            nullFunctionSpec(true),
+            nullFunctionSpec(true)
+        ];
+        var typeOnly = !(isJustDef(nextOrObserver) ||
+            isJustDef(error) ||
+            isJustDef(completed));
+        if (typeOnly) {
+            return makeBinder(binderSpecs);
+        }
+        else {
+            return makeBinder(null)(nextOrObserver, error, completed);
+        }
+    };
+    /**
+     * This object behaves like a Promise, and resolves with its snapshot data
+     * when the upload completes.
+     * @param onFulfilled The fulfillment callback. Promise chaining works as normal.
+     * @param onRejected The rejection callback.
+     */
+    UploadTask.prototype.then = function (onFulfilled, onRejected) {
+        // These casts are needed so that TypeScript can infer the types of the
+        // resulting Promise.
+        return this.promise_.then(onFulfilled, onRejected);
+    };
+    /**
+     * Equivalent to calling `then(null, onRejected)`.
+     */
+    UploadTask.prototype.catch = function (onRejected) {
+        return this.then(null, onRejected);
+    };
+    /**
+     * Adds the given observer.
+     */
+    UploadTask.prototype.addObserver_ = function (observer) {
+        this.observers_.push(observer);
+        this.notifyObserver_(observer);
+    };
+    /**
+     * Removes the given observer.
+     */
+    UploadTask.prototype.removeObserver_ = function (observer) {
+        remove(this.observers_, observer);
+    };
+    UploadTask.prototype.notifyObservers_ = function () {
+        var _this = this;
+        this.finishPromise_();
+        var observers = clone$1(this.observers_);
+        observers.forEach(function (observer) {
+            _this.notifyObserver_(observer);
+        });
+    };
+    UploadTask.prototype.finishPromise_ = function () {
+        if (this.resolve_ !== null) {
+            var triggered = true;
+            switch (taskStateFromInternalTaskState(this.state_)) {
+                case TaskState.SUCCESS:
+                    async(this.resolve_.bind(null, this.snapshot))();
+                    break;
+                case TaskState.CANCELED:
+                case TaskState.ERROR:
+                    var toCall = this.reject_;
+                    async(toCall.bind(null, this.error_))();
+                    break;
+                default:
+                    triggered = false;
+                    break;
+            }
+            if (triggered) {
+                this.resolve_ = null;
+                this.reject_ = null;
+            }
+        }
+    };
+    UploadTask.prototype.notifyObserver_ = function (observer) {
+        var externalState = taskStateFromInternalTaskState(this.state_);
+        switch (externalState) {
+            case TaskState.RUNNING:
+            case TaskState.PAUSED:
+                if (observer.next !== null) {
+                    async(observer.next.bind(observer, this.snapshot))();
+                }
+                break;
+            case TaskState.SUCCESS:
+                if (observer.complete !== null) {
+                    async(observer.complete.bind(observer))();
+                }
+                break;
+            case TaskState.CANCELED:
+            case TaskState.ERROR:
+                if (observer.error !== null) {
+                    async(observer.error.bind(observer, this.error_))();
+                }
+                break;
+            default:
+                // TODO(andysoto): assert(false);
+                if (observer.error !== null) {
+                    async(observer.error.bind(observer, this.error_))();
+                }
+        }
+    };
+    /**
+     * Resumes a paused task. Has no effect on a currently running or failed task.
+     * @return True if the operation took effect, false if ignored.
+     */
+    UploadTask.prototype.resume = function () {
+        validate('resume', [], arguments);
+        var valid = this.state_ === InternalTaskState.PAUSED ||
+            this.state_ === InternalTaskState.PAUSING;
+        if (valid) {
+            this.transition_(InternalTaskState.RUNNING);
+        }
+        return valid;
+    };
+    /**
+     * Pauses a currently running task. Has no effect on a paused or failed task.
+     * @return True if the operation took effect, false if ignored.
+     */
+    UploadTask.prototype.pause = function () {
+        validate('pause', [], arguments);
+        var valid = this.state_ === InternalTaskState.RUNNING;
+        if (valid) {
+            this.transition_(InternalTaskState.PAUSING);
+        }
+        return valid;
+    };
+    /**
+     * Cancels a currently running or paused task. Has no effect on a complete or
+     * failed task.
+     * @return True if the operation took effect, false if ignored.
+     */
+    UploadTask.prototype.cancel = function () {
+        validate('cancel', [], arguments);
+        var valid = this.state_ === InternalTaskState.RUNNING ||
+            this.state_ === InternalTaskState.PAUSING;
+        if (valid) {
+            this.transition_(InternalTaskState.CANCELING);
+        }
+        return valid;
+    };
+    return UploadTask;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Provides methods to interact with a bucket in the Firebase Storage service.
+ * @param location An fbs.location, or the URL at
+ *     which to base this object, in one of the following forms:
+ *         gs://<bucket>/<object-path>
+ *         http[s]://firebasestorage.googleapis.com/
+ *                     <api-version>/b/<bucket>/o/<object-path>
+ *     Any query or fragment strings will be ignored in the http[s]
+ *     format. If no value is passed, the storage object will use a URL based on
+ *     the project ID of the base firebase.App instance.
+ */
+var Reference = /** @class */ (function () {
+    function Reference(authWrapper, location) {
+        this.authWrapper = authWrapper;
+        if (location instanceof Location) {
+            this.location = location;
+        }
+        else {
+            this.location = Location.makeFromUrl(location);
+        }
+    }
+    /**
+     * @return The URL for the bucket and path this object references,
+     *     in the form gs://<bucket>/<object-path>
+     * @override
+     */
+    Reference.prototype.toString = function () {
+        validate('toString', [], arguments);
+        return 'gs://' + this.location.bucket + '/' + this.location.path;
+    };
+    Reference.prototype.newRef = function (authWrapper, location) {
+        return new Reference(authWrapper, location);
+    };
+    Reference.prototype.mappings = function () {
+        return getMappings();
+    };
+    /**
+     * @return A reference to the object obtained by
+     *     appending childPath, removing any duplicate, beginning, or trailing
+     *     slashes.
+     */
+    Reference.prototype.child = function (childPath) {
+        validate('child', [stringSpec()], arguments);
+        var newPath = child(this.location.path, childPath);
+        var location = new Location(this.location.bucket, newPath);
+        return this.newRef(this.authWrapper, location);
+    };
+    Object.defineProperty(Reference.prototype, "parent", {
+        /**
+         * @return A reference to the parent of the
+         *     current object, or null if the current object is the root.
+         */
+        get: function () {
+            var newPath = parent(this.location.path);
+            if (newPath === null) {
+                return null;
+            }
+            var location = new Location(this.location.bucket, newPath);
+            return this.newRef(this.authWrapper, location);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Reference.prototype, "root", {
+        /**
+         * @return An reference to the root of this
+         *     object's bucket.
+         */
+        get: function () {
+            var location = new Location(this.location.bucket, '');
+            return this.newRef(this.authWrapper, location);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Reference.prototype, "bucket", {
+        get: function () {
+            return this.location.bucket;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Reference.prototype, "fullPath", {
+        get: function () {
+            return this.location.path;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Reference.prototype, "name", {
+        get: function () {
+            return lastComponent(this.location.path);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Reference.prototype, "storage", {
+        get: function () {
+            return this.authWrapper.service();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    /**
+     * Uploads a blob to this object's location.
+     * @param data The blob to upload.
+     * @return An UploadTask that lets you control and
+     *     observe the upload.
+     */
+    Reference.prototype.put = function (data, metadata) {
+        if (metadata === void 0) { metadata = null; }
+        validate('put', [uploadDataSpec(), metadataSpec(true)], arguments);
+        this.throwIfRoot_('put');
+        return new UploadTask(this, this.authWrapper, this.location, this.mappings(), new FbsBlob(data), metadata);
+    };
+    /**
+     * Uploads a string to this object's location.
+     * @param string The string to upload.
+     * @param opt_format The format of the string to upload.
+     * @return An UploadTask that lets you control and
+     *     observe the upload.
+     */
+    Reference.prototype.putString = function (string, format, opt_metadata) {
+        if (format === void 0) { format = StringFormat.RAW; }
+        validate('putString', [
+            stringSpec(),
+            stringSpec(formatValidator, true),
+            metadataSpec(true)
+        ], arguments);
+        this.throwIfRoot_('putString');
+        var data = dataFromString(format, string);
+        var metadata = clone(opt_metadata);
+        if (!isDef(metadata['contentType']) && isDef(data.contentType)) {
+            metadata['contentType'] = data.contentType;
+        }
+        return new UploadTask(this, this.authWrapper, this.location, this.mappings(), new FbsBlob(data.data, true), metadata);
+    };
+    /**
+     * Deletes the object at this location.
+     * @return A promise that resolves if the deletion succeeds.
+     */
+    Reference.prototype.delete = function () {
+        validate('delete', [], arguments);
+        this.throwIfRoot_('delete');
+        var self = this;
+        return this.authWrapper.getAuthToken().then(function (authToken) {
+            var requestInfo = deleteObject(self.authWrapper, self.location);
+            return self.authWrapper.makeRequest(requestInfo, authToken).getPromise();
+        });
+    };
+    /**
+     *     A promise that resolves with the metadata for this object. If this
+     *     object doesn't exist or metadata cannot be retreived, the promise is
+     *     rejected.
+     */
+    Reference.prototype.getMetadata = function () {
+        validate('getMetadata', [], arguments);
+        this.throwIfRoot_('getMetadata');
+        var self = this;
+        return this.authWrapper.getAuthToken().then(function (authToken) {
+            var requestInfo = getMetadata(self.authWrapper, self.location, self.mappings());
+            return self.authWrapper.makeRequest(requestInfo, authToken).getPromise();
+        });
+    };
+    /**
+     * Updates the metadata for this object.
+     * @param metadata The new metadata for the object.
+     *     Only values that have been explicitly set will be changed. Explicitly
+     *     setting a value to null will remove the metadata.
+     * @return A promise that resolves
+     *     with the new metadata for this object.
+     *     @see firebaseStorage.Reference.prototype.getMetadata
+     */
+    Reference.prototype.updateMetadata = function (metadata) {
+        validate('updateMetadata', [metadataSpec()], arguments);
+        this.throwIfRoot_('updateMetadata');
+        var self = this;
+        return this.authWrapper.getAuthToken().then(function (authToken) {
+            var requestInfo = updateMetadata(self.authWrapper, self.location, metadata, self.mappings());
+            return self.authWrapper.makeRequest(requestInfo, authToken).getPromise();
+        });
+    };
+    /**
+     * @return A promise that resolves with the download
+     *     URL for this object.
+     */
+    Reference.prototype.getDownloadURL = function () {
+        validate('getDownloadURL', [], arguments);
+        this.throwIfRoot_('getDownloadURL');
+        var self = this;
+        return this.authWrapper.getAuthToken().then(function (authToken) {
+            var requestInfo = getDownloadUrl(self.authWrapper, self.location, self.mappings());
+            return self.authWrapper
+                .makeRequest(requestInfo, authToken)
+                .getPromise()
+                .then(function (url) {
+                if (url === null) {
+                    throw noDownloadURL();
+                }
+                return url;
+            });
+        });
+    };
+    Reference.prototype.throwIfRoot_ = function (name) {
+        if (this.location.path === '') {
+            throw invalidRootOperation(name);
+        }
+    };
+    return Reference;
+}());
+
+/**
+ * A request whose promise always fails.
+ * @struct
+ * @template T
+ */
+var FailRequest = /** @class */ (function () {
+    function FailRequest(error) {
+        this.promise_ = reject(error);
+    }
+    /** @inheritDoc */
+    FailRequest.prototype.getPromise = function () {
+        return this.promise_;
+    };
+    /** @inheritDoc */
+    FailRequest.prototype.cancel = function (appDelete) {
+        if (appDelete === void 0) { appDelete = false; }
+    };
+    return FailRequest;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @struct
+ */
+var RequestMap = /** @class */ (function () {
+    function RequestMap() {
+        this.map_ = {};
+        this.id_ = minSafeInteger;
+    }
+    /**
+     * Registers the given request with this map.
+     * The request is unregistered when it completes.
+     * @param r The request to register.
+     */
+    RequestMap.prototype.addRequest = function (r) {
+        var id = this.id_;
+        this.id_++;
+        this.map_[id] = r;
+        var self = this;
+        function unmap() {
+            delete self.map_[id];
+        }
+        r.getPromise().then(unmap, unmap);
+    };
+    /**
+     * Cancels all registered requests.
+     */
+    RequestMap.prototype.clear = function () {
+        forEach(this.map_, function (key, val) {
+            if (val) {
+                val.cancel(true);
+            }
+        });
+        this.map_ = {};
+    };
+    return RequestMap;
+}());
+
+/**
+ * @param app If null, getAuthToken always resolves with null.
+ * @param service The storage service associated with this auth wrapper.
+ *     Untyped to avoid circular type dependencies.
+ * @struct
+ */
+var AuthWrapper = /** @class */ (function () {
+    function AuthWrapper(app, maker, requestMaker, service, pool) {
+        this.bucket_ = null;
+        this.deleted_ = false;
+        this.app_ = app;
+        if (this.app_ !== null) {
+            var options = this.app_.options;
+            if (isDef(options)) {
+                this.bucket_ = AuthWrapper.extractBucket_(options);
+            }
+        }
+        this.storageRefMaker_ = maker;
+        this.requestMaker_ = requestMaker;
+        this.pool_ = pool;
+        this.service_ = service;
+        this.maxOperationRetryTime_ = defaultMaxOperationRetryTime;
+        this.maxUploadRetryTime_ = defaultMaxUploadRetryTime;
+        this.requestMap_ = new RequestMap();
+    }
+    AuthWrapper.extractBucket_ = function (config) {
+        var bucketString = config[configOption] || null;
+        if (bucketString == null) {
+            return null;
+        }
+        var loc = Location.makeFromBucketSpec(bucketString);
+        return loc.bucket;
+    };
+    AuthWrapper.prototype.getAuthToken = function () {
+        // TODO(andysoto): remove ifDef checks after firebase-app implements stubs
+        // (b/28673818).
+        if (this.app_ !== null &&
+            isDef(this.app_.INTERNAL) &&
+            isDef(this.app_.INTERNAL.getToken)) {
+            return this.app_.INTERNAL.getToken().then(function (response) {
+                if (response !== null) {
+                    return response.accessToken;
+                }
+                else {
+                    return null;
+                }
+            }, function (_error) {
+                return null;
+            });
+        }
+        else {
+            return resolve(null);
+        }
+    };
+    AuthWrapper.prototype.bucket = function () {
+        if (this.deleted_) {
+            throw appDeleted();
+        }
+        else {
+            return this.bucket_;
+        }
+    };
+    /**
+     * The service associated with this auth wrapper. Untyped to avoid circular
+     * type dependencies.
+     */
+    AuthWrapper.prototype.service = function () {
+        return this.service_;
+    };
+    /**
+     * Returns a new firebaseStorage.Reference object referencing this AuthWrapper
+     * at the given Location.
+     * @param loc The Location.
+     * @return Actually a firebaseStorage.Reference, typing not allowed
+     *     because of circular dependency problems.
+     */
+    AuthWrapper.prototype.makeStorageReference = function (loc) {
+        return this.storageRefMaker_(this, loc);
+    };
+    AuthWrapper.prototype.makeRequest = function (requestInfo, authToken) {
+        if (!this.deleted_) {
+            var request = this.requestMaker_(requestInfo, authToken, this.pool_);
+            this.requestMap_.addRequest(request);
+            return request;
+        }
+        else {
+            return new FailRequest(appDeleted());
+        }
+    };
+    /**
+     * Stop running requests and prevent more from being created.
+     */
+    AuthWrapper.prototype.deleteApp = function () {
+        this.deleted_ = true;
+        this.app_ = null;
+        this.requestMap_.clear();
+    };
+    AuthWrapper.prototype.maxUploadRetryTime = function () {
+        return this.maxUploadRetryTime_;
+    };
+    AuthWrapper.prototype.setMaxUploadRetryTime = function (time) {
+        this.maxUploadRetryTime_ = time;
+    };
+    AuthWrapper.prototype.maxOperationRetryTime = function () {
+        return this.maxOperationRetryTime_;
+    };
+    AuthWrapper.prototype.setMaxOperationRetryTime = function (time) {
+        this.maxOperationRetryTime_ = time;
+    };
+    return AuthWrapper;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @param f May be invoked
+ *     before the function returns.
+ * @param callback Get all the arguments passed to the function
+ *     passed to f, including the initial boolean.
+ */
+function start(f, callback, timeout) {
+    // TODO(andysoto): make this code cleaner (probably refactor into an actual
+    // type instead of a bunch of functions with state shared in the closure)
+    var waitSeconds = 1;
+    // Would type this as "number" but that doesn't work for Node so ¯\_(ツ)_/¯
+    var timeoutId = null;
+    var hitTimeout = false;
+    var cancelState = 0;
+    function canceled() {
+        return cancelState === 2;
+    }
+    var triggeredCallback = false;
+    function triggerCallback() {
+        if (!triggeredCallback) {
+            triggeredCallback = true;
+            callback.apply(null, arguments);
+        }
+    }
+    function callWithDelay(millis) {
+        timeoutId = setTimeout(function () {
+            timeoutId = null;
+            f(handler, canceled());
+        }, millis);
+    }
+    function handler(success) {
+        var var_args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            var_args[_i - 1] = arguments[_i];
+        }
+        if (triggeredCallback) {
+            return;
+        }
+        if (success) {
+            triggerCallback.apply(null, arguments);
+            return;
+        }
+        var mustStop = canceled() || hitTimeout;
+        if (mustStop) {
+            triggerCallback.apply(null, arguments);
+            return;
+        }
+        if (waitSeconds < 64) {
+            /* TODO(andysoto): don't back off so quickly if we know we're offline. */
+            waitSeconds *= 2;
+        }
+        var waitMillis;
+        if (cancelState === 1) {
+            cancelState = 2;
+            waitMillis = 0;
+        }
+        else {
+            waitMillis = (waitSeconds + Math.random()) * 1000;
+        }
+        callWithDelay(waitMillis);
+    }
+    var stopped = false;
+    function stop(wasTimeout) {
+        if (stopped) {
+            return;
+        }
+        stopped = true;
+        if (triggeredCallback) {
+            return;
+        }
+        if (timeoutId !== null) {
+            if (!wasTimeout) {
+                cancelState = 2;
+            }
+            clearTimeout(timeoutId);
+            callWithDelay(0);
+        }
+        else {
+            if (!wasTimeout) {
+                cancelState = 1;
+            }
+        }
+    }
+    callWithDelay(0);
+    setTimeout(function () {
+        hitTimeout = true;
+        stop(true);
+    }, timeout);
+    return stop;
+}
+/**
+ * Stops the retry loop from repeating.
+ * If the function is currently "in between" retries, it is invoked immediately
+ * with the second parameter as "true". Otherwise, it will be invoked once more
+ * after the current invocation finishes iff the current invocation would have
+ * triggered another retry.
+ */
+function stop(id) {
+    id(false);
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @struct
+ * @template T
+ */
+var NetworkRequest = /** @class */ (function () {
+    function NetworkRequest(url, method, headers, body, successCodes, additionalRetryCodes, callback, errorCallback, timeout, progressCallback, pool) {
+        this.pendingXhr_ = null;
+        this.backoffId_ = null;
+        this.resolve_ = null;
+        this.reject_ = null;
+        this.canceled_ = false;
+        this.appDelete_ = false;
+        this.url_ = url;
+        this.method_ = method;
+        this.headers_ = headers;
+        this.body_ = body;
+        this.successCodes_ = successCodes.slice();
+        this.additionalRetryCodes_ = additionalRetryCodes.slice();
+        this.callback_ = callback;
+        this.errorCallback_ = errorCallback;
+        this.progressCallback_ = progressCallback;
+        this.timeout_ = timeout;
+        this.pool_ = pool;
+        var self = this;
+        this.promise_ = make(function (resolve$$1, reject$$1) {
+            self.resolve_ = resolve$$1;
+            self.reject_ = reject$$1;
+            self.start_();
+        });
+    }
+    /**
+     * Actually starts the retry loop.
+     */
+    NetworkRequest.prototype.start_ = function () {
+        var self = this;
+        function doTheRequest(backoffCallback, canceled$$1) {
+            if (canceled$$1) {
+                backoffCallback(false, new RequestEndStatus(false, null, true));
+                return;
+            }
+            var xhr = self.pool_.createXhrIo();
+            self.pendingXhr_ = xhr;
+            function progressListener(progressEvent) {
+                var loaded = progressEvent.loaded;
+                var total = progressEvent.lengthComputable ? progressEvent.total : -1;
+                if (self.progressCallback_ !== null) {
+                    self.progressCallback_(loaded, total);
+                }
+            }
+            if (self.progressCallback_ !== null) {
+                xhr.addUploadProgressListener(progressListener);
+            }
+            xhr
+                .send(self.url_, self.method_, self.body_, self.headers_)
+                .then(function (xhr) {
+                if (self.progressCallback_ !== null) {
+                    xhr.removeUploadProgressListener(progressListener);
+                }
+                self.pendingXhr_ = null;
+                xhr = xhr;
+                var hitServer = xhr.getErrorCode() === ErrorCode.NO_ERROR;
+                var status = xhr.getStatus();
+                if (!hitServer || self.isRetryStatusCode_(status)) {
+                    var wasCanceled = xhr.getErrorCode() === ErrorCode.ABORT;
+                    backoffCallback(false, new RequestEndStatus(false, null, wasCanceled));
+                    return;
+                }
+                var successCode = contains$1(self.successCodes_, status);
+                backoffCallback(true, new RequestEndStatus(successCode, xhr));
+            });
+        }
+        /**
+         * @param requestWentThrough True if the request eventually went
+         *     through, false if it hit the retry limit or was canceled.
+         */
+        function backoffDone(requestWentThrough, status) {
+            var resolve$$1 = self.resolve_;
+            var reject$$1 = self.reject_;
+            var xhr = status.xhr;
+            if (status.wasSuccessCode) {
+                try {
+                    var result = self.callback_(xhr, xhr.getResponseText());
+                    if (isJustDef(result)) {
+                        resolve$$1(result);
+                    }
+                    else {
+                        resolve$$1();
+                    }
+                }
+                catch (e) {
+                    reject$$1(e);
+                }
+            }
+            else {
+                if (xhr !== null) {
+                    var err = unknown();
+                    err.setServerResponseProp(xhr.getResponseText());
+                    if (self.errorCallback_) {
+                        reject$$1(self.errorCallback_(xhr, err));
+                    }
+                    else {
+                        reject$$1(err);
+                    }
+                }
+                else {
+                    if (status.canceled) {
+                        var err = self.appDelete_
+                            ? appDeleted()
+                            : canceled();
+                        reject$$1(err);
+                    }
+                    else {
+                        var err = retryLimitExceeded();
+                        reject$$1(err);
+                    }
+                }
+            }
+        }
+        if (this.canceled_) {
+            backoffDone(false, new RequestEndStatus(false, null, true));
+        }
+        else {
+            this.backoffId_ = start(doTheRequest, backoffDone, this.timeout_);
+        }
+    };
+    /** @inheritDoc */
+    NetworkRequest.prototype.getPromise = function () {
+        return this.promise_;
+    };
+    /** @inheritDoc */
+    NetworkRequest.prototype.cancel = function (appDelete) {
+        this.canceled_ = true;
+        this.appDelete_ = appDelete || false;
+        if (this.backoffId_ !== null) {
+            stop(this.backoffId_);
+        }
+        if (this.pendingXhr_ !== null) {
+            this.pendingXhr_.abort();
+        }
+    };
+    NetworkRequest.prototype.isRetryStatusCode_ = function (status) {
+        // The codes for which to retry came from this page:
+        // https://cloud.google.com/storage/docs/exponential-backoff
+        var isFiveHundredCode = status >= 500 && status < 600;
+        var extraRetryCodes = [
+            // Request Timeout: web server didn't receive full request in time.
+            408,
+            // Too Many Requests: you're getting rate-limited, basically.
+            429
+        ];
+        var isExtraRetryCode = contains$1(extraRetryCodes, status);
+        var isRequestSpecificRetryCode = contains$1(this.additionalRetryCodes_, status);
+        return isFiveHundredCode || isExtraRetryCode || isRequestSpecificRetryCode;
+    };
+    return NetworkRequest;
+}());
+/**
+ * A collection of information about the result of a network request.
+ * @param opt_canceled Defaults to false.
+ * @struct
+ */
+var RequestEndStatus = /** @class */ (function () {
+    function RequestEndStatus(wasSuccessCode, xhr, opt_canceled) {
+        this.wasSuccessCode = wasSuccessCode;
+        this.xhr = xhr;
+        this.canceled = !!opt_canceled;
+    }
+    return RequestEndStatus;
+}());
+function addAuthHeader_(headers, authToken) {
+    if (authToken !== null && authToken.length > 0) {
+        headers['Authorization'] = 'Firebase ' + authToken;
+    }
+}
+function addVersionHeader_(headers) {
+    var number = typeof _firebase_app__WEBPACK_IMPORTED_MODULE_0___default.a !== 'undefined' ? _firebase_app__WEBPACK_IMPORTED_MODULE_0___default.a.SDK_VERSION : 'AppManager';
+    headers['X-Firebase-Storage-Version'] = 'webjs/' + number;
+}
+/**
+ * @template T
+ */
+function makeRequest(requestInfo, authToken, pool) {
+    var queryPart = makeQueryString(requestInfo.urlParams);
+    var url = requestInfo.url + queryPart;
+    var headers = clone(requestInfo.headers);
+    addAuthHeader_(headers, authToken);
+    addVersionHeader_(headers);
+    return new NetworkRequest(url, requestInfo.method, headers, requestInfo.body, requestInfo.successCodes, requestInfo.additionalRetryCodes, requestInfo.handler, requestInfo.errorHandler, requestInfo.timeout, requestInfo.progressCallback, pool);
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * A service that provides firebaseStorage.Reference instances.
+ * @param opt_url gs:// url to a custom Storage Bucket
+ *
+ * @struct
+ */
+var Service = /** @class */ (function () {
+    function Service(app, pool, url) {
+        this.bucket_ = null;
+        function maker(authWrapper, loc) {
+            return new Reference(authWrapper, loc);
+        }
+        this.authWrapper_ = new AuthWrapper(app, maker, makeRequest, this, pool);
+        this.app_ = app;
+        if (url != null) {
+            this.bucket_ = Location.makeFromBucketSpec(url);
+        }
+        else {
+            var authWrapperBucket = this.authWrapper_.bucket();
+            if (authWrapperBucket != null) {
+                this.bucket_ = new Location(authWrapperBucket, '');
+            }
+        }
+        this.internals_ = new ServiceInternals(this);
+    }
+    /**
+     * Returns a firebaseStorage.Reference for the given path in the default
+     * bucket.
+     */
+    Service.prototype.ref = function (path) {
+        function validator(path) {
+            if (/^[A-Za-z]+:\/\//.test(path)) {
+                throw 'Expected child path but got a URL, use refFromURL instead.';
+            }
+        }
+        validate('ref', [stringSpec(validator, true)], arguments);
+        if (this.bucket_ == null) {
+            throw new Error('No Storage Bucket defined in Firebase Options.');
+        }
+        var ref = new Reference(this.authWrapper_, this.bucket_);
+        if (path != null) {
+            return ref.child(path);
+        }
+        else {
+            return ref;
+        }
+    };
+    /**
+     * Returns a firebaseStorage.Reference object for the given absolute URL,
+     * which must be a gs:// or http[s]:// URL.
+     */
+    Service.prototype.refFromURL = function (url) {
+        function validator(p) {
+            if (!/^[A-Za-z]+:\/\//.test(p)) {
+                throw 'Expected full URL but got a child path, use ref instead.';
+            }
+            try {
+                Location.makeFromUrl(p);
+            }
+            catch (e) {
+                throw 'Expected valid full URL but got an invalid one.';
+            }
+        }
+        validate('refFromURL', [stringSpec(validator, false)], arguments);
+        return new Reference(this.authWrapper_, url);
+    };
+    Object.defineProperty(Service.prototype, "maxUploadRetryTime", {
+        get: function () {
+            return this.authWrapper_.maxUploadRetryTime();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Service.prototype.setMaxUploadRetryTime = function (time) {
+        validate('setMaxUploadRetryTime', [nonNegativeNumberSpec()], arguments);
+        this.authWrapper_.setMaxUploadRetryTime(time);
+    };
+    Object.defineProperty(Service.prototype, "maxOperationRetryTime", {
+        get: function () {
+            return this.authWrapper_.maxOperationRetryTime();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Service.prototype.setMaxOperationRetryTime = function (time) {
+        validate('setMaxOperationRetryTime', [nonNegativeNumberSpec()], arguments);
+        this.authWrapper_.setMaxOperationRetryTime(time);
+    };
+    Object.defineProperty(Service.prototype, "app", {
+        get: function () {
+            return this.app_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Service.prototype, "INTERNAL", {
+        get: function () {
+            return this.internals_;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return Service;
+}());
+/**
+ * @struct
+ */
+var ServiceInternals = /** @class */ (function () {
+    function ServiceInternals(service) {
+        this.service_ = service;
+    }
+    /**
+     * Called when the associated app is deleted.
+     * @see {!fbs.AuthWrapper.prototype.deleteApp}
+     */
+    ServiceInternals.prototype.delete = function () {
+        this.service_.authWrapper_.deleteApp();
+        return resolve(undefined);
+    };
+    return ServiceInternals;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Type constant for Firebase Storage.
+ */
+var STORAGE_TYPE = 'storage';
+function factory(app, unused, opt_url) {
+    return new Service(app, new XhrIoPool(), opt_url);
+}
+function registerStorage(instance) {
+    var namespaceExports = {
+        // no-inline
+        TaskState: TaskState,
+        TaskEvent: TaskEvent,
+        StringFormat: StringFormat,
+        Storage: Service,
+        Reference: Reference
+    };
+    instance.INTERNAL.registerService(STORAGE_TYPE, factory, namespaceExports, undefined, 
+    // Allow multiple storage instances per app.
+    true);
+}
+registerStorage(_firebase_app__WEBPACK_IMPORTED_MODULE_0___default.a);
+
+
+
+
+/***/ }),
+
+/***/ "./node_modules/@firebase/util/dist/index.cjs.js":
+/*!*******************************************************!*\
+  !*** ./node_modules/@firebase/util/dist/index.cjs.js ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, '__esModule', { value: true });
+
+var tslib_1 = __webpack_require__(/*! tslib */ "./node_modules/@firebase/util/node_modules/tslib/tslib.es6.js");
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @fileoverview Firebase constants.  Some of these (@defines) can be overridden at compile-time.
+ */
+var CONSTANTS = {
+    /**
+     * @define {boolean} Whether this is the client Node.js SDK.
+     */
+    NODE_CLIENT: false,
+    /**
+     * @define {boolean} Whether this is the Admin Node.js SDK.
+     */
+    NODE_ADMIN: false,
+    /**
+     * Firebase SDK Version
+     */
+    SDK_VERSION: '${JSCORE_VERSION}'
+};
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Throws an error if the provided assertion is falsy
+ * @param {*} assertion The assertion to be tested for falsiness
+ * @param {!string} message The message to display if the check fails
+ */
+var assert = function (assertion, message) {
+    if (!assertion) {
+        throw assertionError(message);
+    }
+};
+/**
+ * Returns an Error object suitable for throwing.
+ * @param {string} message
+ * @return {!Error}
+ */
+var assertionError = function (message) {
+    return new Error('Firebase Database (' +
+        CONSTANTS.SDK_VERSION +
+        ') INTERNAL ASSERT FAILED: ' +
+        message);
+};
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var stringToByteArray = function (str) {
+    // TODO(user): Use native implementations if/when available
+    var out = [], p = 0;
+    for (var i = 0; i < str.length; i++) {
+        var c = str.charCodeAt(i);
+        if (c < 128) {
+            out[p++] = c;
+        }
+        else if (c < 2048) {
+            out[p++] = (c >> 6) | 192;
+            out[p++] = (c & 63) | 128;
+        }
+        else if ((c & 0xfc00) == 0xd800 &&
+            i + 1 < str.length &&
+            (str.charCodeAt(i + 1) & 0xfc00) == 0xdc00) {
+            // Surrogate Pair
+            c = 0x10000 + ((c & 0x03ff) << 10) + (str.charCodeAt(++i) & 0x03ff);
+            out[p++] = (c >> 18) | 240;
+            out[p++] = ((c >> 12) & 63) | 128;
+            out[p++] = ((c >> 6) & 63) | 128;
+            out[p++] = (c & 63) | 128;
+        }
+        else {
+            out[p++] = (c >> 12) | 224;
+            out[p++] = ((c >> 6) & 63) | 128;
+            out[p++] = (c & 63) | 128;
+        }
+    }
+    return out;
+};
+/**
+ * Turns an array of numbers into the string given by the concatenation of the
+ * characters to which the numbers correspond.
+ * @param {Array<number>} bytes Array of numbers representing characters.
+ * @return {string} Stringification of the array.
+ */
+var byteArrayToString = function (bytes) {
+    // TODO(user): Use native implementations if/when available
+    var out = [], pos = 0, c = 0;
+    while (pos < bytes.length) {
+        var c1 = bytes[pos++];
+        if (c1 < 128) {
+            out[c++] = String.fromCharCode(c1);
+        }
+        else if (c1 > 191 && c1 < 224) {
+            var c2 = bytes[pos++];
+            out[c++] = String.fromCharCode(((c1 & 31) << 6) | (c2 & 63));
+        }
+        else if (c1 > 239 && c1 < 365) {
+            // Surrogate Pair
+            var c2 = bytes[pos++];
+            var c3 = bytes[pos++];
+            var c4 = bytes[pos++];
+            var u = (((c1 & 7) << 18) | ((c2 & 63) << 12) | ((c3 & 63) << 6) | (c4 & 63)) -
+                0x10000;
+            out[c++] = String.fromCharCode(0xd800 + (u >> 10));
+            out[c++] = String.fromCharCode(0xdc00 + (u & 1023));
+        }
+        else {
+            var c2 = bytes[pos++];
+            var c3 = bytes[pos++];
+            out[c++] = String.fromCharCode(((c1 & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+        }
+    }
+    return out.join('');
+};
+// Static lookup maps, lazily populated by init_()
+var base64 = {
+    /**
+     * Maps bytes to characters.
+     * @type {Object}
+     * @private
+     */
+    byteToCharMap_: null,
+    /**
+     * Maps characters to bytes.
+     * @type {Object}
+     * @private
+     */
+    charToByteMap_: null,
+    /**
+     * Maps bytes to websafe characters.
+     * @type {Object}
+     * @private
+     */
+    byteToCharMapWebSafe_: null,
+    /**
+     * Maps websafe characters to bytes.
+     * @type {Object}
+     * @private
+     */
+    charToByteMapWebSafe_: null,
+    /**
+     * Our default alphabet, shared between
+     * ENCODED_VALS and ENCODED_VALS_WEBSAFE
+     * @type {string}
+     */
+    ENCODED_VALS_BASE: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + 'abcdefghijklmnopqrstuvwxyz' + '0123456789',
+    /**
+     * Our default alphabet. Value 64 (=) is special; it means "nothing."
+     * @type {string}
+     */
+    get ENCODED_VALS() {
+        return this.ENCODED_VALS_BASE + '+/=';
+    },
+    /**
+     * Our websafe alphabet.
+     * @type {string}
+     */
+    get ENCODED_VALS_WEBSAFE() {
+        return this.ENCODED_VALS_BASE + '-_.';
+    },
+    /**
+     * Whether this browser supports the atob and btoa functions. This extension
+     * started at Mozilla but is now implemented by many browsers. We use the
+     * ASSUME_* variables to avoid pulling in the full useragent detection library
+     * but still allowing the standard per-browser compilations.
+     *
+     * @type {boolean}
+     */
+    HAS_NATIVE_SUPPORT: typeof atob === 'function',
+    /**
+     * Base64-encode an array of bytes.
+     *
+     * @param {Array<number>|Uint8Array} input An array of bytes (numbers with
+     *     value in [0, 255]) to encode.
+     * @param {boolean=} opt_webSafe Boolean indicating we should use the
+     *     alternative alphabet.
+     * @return {string} The base64 encoded string.
+     */
+    encodeByteArray: function (input, opt_webSafe) {
+        if (!Array.isArray(input)) {
+            throw Error('encodeByteArray takes an array as a parameter');
+        }
+        this.init_();
+        var byteToCharMap = opt_webSafe
+            ? this.byteToCharMapWebSafe_
+            : this.byteToCharMap_;
+        var output = [];
+        for (var i = 0; i < input.length; i += 3) {
+            var byte1 = input[i];
+            var haveByte2 = i + 1 < input.length;
+            var byte2 = haveByte2 ? input[i + 1] : 0;
+            var haveByte3 = i + 2 < input.length;
+            var byte3 = haveByte3 ? input[i + 2] : 0;
+            var outByte1 = byte1 >> 2;
+            var outByte2 = ((byte1 & 0x03) << 4) | (byte2 >> 4);
+            var outByte3 = ((byte2 & 0x0f) << 2) | (byte3 >> 6);
+            var outByte4 = byte3 & 0x3f;
+            if (!haveByte3) {
+                outByte4 = 64;
+                if (!haveByte2) {
+                    outByte3 = 64;
+                }
+            }
+            output.push(byteToCharMap[outByte1], byteToCharMap[outByte2], byteToCharMap[outByte3], byteToCharMap[outByte4]);
+        }
+        return output.join('');
+    },
+    /**
+     * Base64-encode a string.
+     *
+     * @param {string} input A string to encode.
+     * @param {boolean=} opt_webSafe If true, we should use the
+     *     alternative alphabet.
+     * @return {string} The base64 encoded string.
+     */
+    encodeString: function (input, opt_webSafe) {
+        // Shortcut for Mozilla browsers that implement
+        // a native base64 encoder in the form of "btoa/atob"
+        if (this.HAS_NATIVE_SUPPORT && !opt_webSafe) {
+            return btoa(input);
+        }
+        return this.encodeByteArray(stringToByteArray(input), opt_webSafe);
+    },
+    /**
+     * Base64-decode a string.
+     *
+     * @param {string} input to decode.
+     * @param {boolean=} opt_webSafe True if we should use the
+     *     alternative alphabet.
+     * @return {string} string representing the decoded value.
+     */
+    decodeString: function (input, opt_webSafe) {
+        // Shortcut for Mozilla browsers that implement
+        // a native base64 encoder in the form of "btoa/atob"
+        if (this.HAS_NATIVE_SUPPORT && !opt_webSafe) {
+            return atob(input);
+        }
+        return byteArrayToString(this.decodeStringToByteArray(input, opt_webSafe));
+    },
+    /**
+     * Base64-decode a string.
+     *
+     * In base-64 decoding, groups of four characters are converted into three
+     * bytes.  If the encoder did not apply padding, the input length may not
+     * be a multiple of 4.
+     *
+     * In this case, the last group will have fewer than 4 characters, and
+     * padding will be inferred.  If the group has one or two characters, it decodes
+     * to one byte.  If the group has three characters, it decodes to two bytes.
+     *
+     * @param {string} input Input to decode.
+     * @param {boolean=} opt_webSafe True if we should use the web-safe alphabet.
+     * @return {!Array<number>} bytes representing the decoded value.
+     */
+    decodeStringToByteArray: function (input, opt_webSafe) {
+        this.init_();
+        var charToByteMap = opt_webSafe
+            ? this.charToByteMapWebSafe_
+            : this.charToByteMap_;
+        var output = [];
+        for (var i = 0; i < input.length;) {
+            var byte1 = charToByteMap[input.charAt(i++)];
+            var haveByte2 = i < input.length;
+            var byte2 = haveByte2 ? charToByteMap[input.charAt(i)] : 0;
+            ++i;
+            var haveByte3 = i < input.length;
+            var byte3 = haveByte3 ? charToByteMap[input.charAt(i)] : 64;
+            ++i;
+            var haveByte4 = i < input.length;
+            var byte4 = haveByte4 ? charToByteMap[input.charAt(i)] : 64;
+            ++i;
+            if (byte1 == null || byte2 == null || byte3 == null || byte4 == null) {
+                throw Error();
+            }
+            var outByte1 = (byte1 << 2) | (byte2 >> 4);
+            output.push(outByte1);
+            if (byte3 != 64) {
+                var outByte2 = ((byte2 << 4) & 0xf0) | (byte3 >> 2);
+                output.push(outByte2);
+                if (byte4 != 64) {
+                    var outByte3 = ((byte3 << 6) & 0xc0) | byte4;
+                    output.push(outByte3);
+                }
+            }
+        }
+        return output;
+    },
+    /**
+     * Lazy static initialization function. Called before
+     * accessing any of the static map variables.
+     * @private
+     */
+    init_: function () {
+        if (!this.byteToCharMap_) {
+            this.byteToCharMap_ = {};
+            this.charToByteMap_ = {};
+            this.byteToCharMapWebSafe_ = {};
+            this.charToByteMapWebSafe_ = {};
+            // We want quick mappings back and forth, so we precompute two maps.
+            for (var i = 0; i < this.ENCODED_VALS.length; i++) {
+                this.byteToCharMap_[i] = this.ENCODED_VALS.charAt(i);
+                this.charToByteMap_[this.byteToCharMap_[i]] = i;
+                this.byteToCharMapWebSafe_[i] = this.ENCODED_VALS_WEBSAFE.charAt(i);
+                this.charToByteMapWebSafe_[this.byteToCharMapWebSafe_[i]] = i;
+                // Be forgiving when decoding and correctly decode both encodings.
+                if (i >= this.ENCODED_VALS_BASE.length) {
+                    this.charToByteMap_[this.ENCODED_VALS_WEBSAFE.charAt(i)] = i;
+                    this.charToByteMapWebSafe_[this.ENCODED_VALS.charAt(i)] = i;
+                }
+            }
+        }
+    }
+};
+/**
+ * URL-safe base64 encoding
+ * @param {!string} str
+ * @return {!string}
+ */
+var base64Encode = function (str) {
+    var utf8Bytes = stringToByteArray(str);
+    return base64.encodeByteArray(utf8Bytes, true);
+};
+/**
+ * URL-safe base64 decoding
+ *
+ * NOTE: DO NOT use the global atob() function - it does NOT support the
+ * base64Url variant encoding.
+ *
+ * @param {string} str To be decoded
+ * @return {?string} Decoded result, if possible
+ */
+var base64Decode = function (str) {
+    try {
+        return base64.decodeString(str, true);
+    }
+    catch (e) {
+        console.error('base64Decode failed: ', e);
+    }
+    return null;
+};
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Do a deep-copy of basic JavaScript Objects or Arrays.
+ */
+function deepCopy(value) {
+    return deepExtend(undefined, value);
+}
+/**
+ * Copy properties from source to target (recursively allows extension
+ * of Objects and Arrays).  Scalar values in the target are over-written.
+ * If target is undefined, an object of the appropriate type will be created
+ * (and returned).
+ *
+ * We recursively copy all child properties of plain Objects in the source- so
+ * that namespace- like dictionaries are merged.
+ *
+ * Note that the target can be a function, in which case the properties in
+ * the source Object are copied onto it as static properties of the Function.
+ */
+function deepExtend(target, source) {
+    if (!(source instanceof Object)) {
+        return source;
+    }
+    switch (source.constructor) {
+        case Date:
+            // Treat Dates like scalars; if the target date object had any child
+            // properties - they will be lost!
+            var dateValue = source;
+            return new Date(dateValue.getTime());
+        case Object:
+            if (target === undefined) {
+                target = {};
+            }
+            break;
+        case Array:
+            // Always copy the array source and overwrite the target.
+            target = [];
+            break;
+        default:
+            // Not a plain Object - treat it as a scalar.
+            return source;
+    }
+    for (var prop in source) {
+        if (!source.hasOwnProperty(prop)) {
+            continue;
+        }
+        target[prop] = deepExtend(target[prop], source[prop]);
+    }
+    return target;
+}
+// TODO: Really needed (for JSCompiler type checking)?
+function patchProperty(obj, prop, value) {
+    obj[prop] = value;
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var Deferred = /** @class */ (function () {
+    function Deferred() {
+        var _this = this;
+        this.promise = new Promise(function (resolve, reject) {
+            _this.resolve = resolve;
+            _this.reject = reject;
+        });
+    }
+    /**
+     * Our API internals are not promiseified and cannot because our callback APIs have subtle expectations around
+     * invoking promises inline, which Promises are forbidden to do. This method accepts an optional node-style callback
+     * and returns a node-style callback which will resolve or reject the Deferred's promise.
+     * @param {((?function(?(Error)): (?|undefined))| (?function(?(Error),?=): (?|undefined)))=} callback
+     * @return {!function(?(Error), ?=)}
+     */
+    Deferred.prototype.wrapCallback = function (callback) {
+        var _this = this;
+        return function (error, value) {
+            if (error) {
+                _this.reject(error);
+            }
+            else {
+                _this.resolve(value);
+            }
+            if (typeof callback === 'function') {
+                // Attaching noop handler just in case developer wasn't expecting
+                // promises
+                _this.promise.catch(function () { });
+                // Some of our callbacks don't expect a value and our own tests
+                // assert that the parameter length is 1
+                if (callback.length === 1) {
+                    callback(error);
+                }
+                else {
+                    callback(error, value);
+                }
+            }
+        };
+    };
+    return Deferred;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Returns navigator.userAgent string or '' if it's not defined.
+ * @return {string} user agent string
+ */
+var getUA = function () {
+    if (typeof navigator !== 'undefined' &&
+        typeof navigator['userAgent'] === 'string') {
+        return navigator['userAgent'];
+    }
+    else {
+        return '';
+    }
+};
+/**
+ * Detect Cordova / PhoneGap / Ionic frameworks on a mobile device.
+ *
+ * Deliberately does not rely on checking `file://` URLs (as this fails PhoneGap in the Ripple emulator) nor
+ * Cordova `onDeviceReady`, which would normally wait for a callback.
+ *
+ * @return {boolean} isMobileCordova
+ */
+var isMobileCordova = function () {
+    return (typeof window !== 'undefined' &&
+        !!(window['cordova'] || window['phonegap'] || window['PhoneGap']) &&
+        /ios|iphone|ipod|ipad|android|blackberry|iemobile/i.test(getUA()));
+};
+/**
+ * Detect React Native.
+ *
+ * @return {boolean} True if ReactNative environment is detected.
+ */
+var isReactNative = function () {
+    return (typeof navigator === 'object' && navigator['product'] === 'ReactNative');
+};
+/**
+ * Detect Node.js.
+ *
+ * @return {boolean} True if Node.js environment is detected.
+ */
+var isNodeSdk = function () {
+    return CONSTANTS.NODE_CLIENT === true || CONSTANTS.NODE_ADMIN === true;
+};
+
+var ERROR_NAME = 'FirebaseError';
+var captureStackTrace = Error
+    .captureStackTrace;
+// Export for faking in tests
+function patchCapture(captureFake) {
+    var result = captureStackTrace;
+    captureStackTrace = captureFake;
+    return result;
+}
+var FirebaseError = /** @class */ (function () {
+    function FirebaseError(code, message) {
+        this.code = code;
+        this.message = message;
+        // We want the stack value, if implemented by Error
+        if (captureStackTrace) {
+            // Patches this.stack, omitted calls above ErrorFactory#create
+            captureStackTrace(this, ErrorFactory.prototype.create);
+        }
+        else {
+            try {
+                // In case of IE11, stack will be set only after error is raised.
+                // https://docs.microsoft.com/en-us/scripting/javascript/reference/stack-property-error-javascript
+                throw Error.apply(this, arguments);
+            }
+            catch (err) {
+                this.name = ERROR_NAME;
+                // Make non-enumerable getter for the property.
+                Object.defineProperty(this, 'stack', {
+                    get: function () {
+                        return err.stack;
+                    }
+                });
+            }
+        }
+    }
+    return FirebaseError;
+}());
+// Back-door inheritance
+FirebaseError.prototype = Object.create(Error.prototype);
+FirebaseError.prototype.constructor = FirebaseError;
+FirebaseError.prototype.name = ERROR_NAME;
+var ErrorFactory = /** @class */ (function () {
+    function ErrorFactory(service, serviceName, errors) {
+        this.service = service;
+        this.serviceName = serviceName;
+        this.errors = errors;
+        // Matches {$name}, by default.
+        this.pattern = /\{\$([^}]+)}/g;
+        // empty
+    }
+    ErrorFactory.prototype.create = function (code, data) {
+        if (data === undefined) {
+            data = {};
+        }
+        var template = this.errors[code];
+        var fullCode = this.service + '/' + code;
+        var message;
+        if (template === undefined) {
+            message = 'Error';
+        }
+        else {
+            message = template.replace(this.pattern, function (match, key) {
+                var value = data[key];
+                return value !== undefined ? value.toString() : '<' + key + '?>';
+            });
+        }
+        // Service: Error message (service/code).
+        message = this.serviceName + ': ' + message + ' (' + fullCode + ').';
+        var err = new FirebaseError(fullCode, message);
+        // Populate the Error object with message parts for programmatic
+        // accesses (e.g., e.file).
+        for (var prop in data) {
+            if (!data.hasOwnProperty(prop) || prop.slice(-1) === '_') {
+                continue;
+            }
+            err[prop] = data[prop];
+        }
+        return err;
+    };
+    return ErrorFactory;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Evaluates a JSON string into a javascript object.
+ *
+ * @param {string} str A string containing JSON.
+ * @return {*} The javascript object representing the specified JSON.
+ */
+function jsonEval(str) {
+    return JSON.parse(str);
+}
+/**
+ * Returns JSON representing a javascript object.
+ * @param {*} data Javascript object to be stringified.
+ * @return {string} The JSON contents of the object.
+ */
+function stringify(data) {
+    return JSON.stringify(data);
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Decodes a Firebase auth. token into constituent parts.
+ *
+ * Notes:
+ * - May return with invalid / incomplete claims if there's no native base64 decoding support.
+ * - Doesn't check if the token is actually valid.
+ *
+ * @param {?string} token
+ * @return {{header: *, claims: *, data: *, signature: string}}
+ */
+var decode = function (token) {
+    var header = {}, claims = {}, data = {}, signature = '';
+    try {
+        var parts = token.split('.');
+        header = jsonEval(base64Decode(parts[0]) || '');
+        claims = jsonEval(base64Decode(parts[1]) || '');
+        signature = parts[2];
+        data = claims['d'] || {};
+        delete claims['d'];
+    }
+    catch (e) { }
+    return {
+        header: header,
+        claims: claims,
+        data: data,
+        signature: signature
+    };
+};
+/**
+ * Decodes a Firebase auth. token and checks the validity of its time-based claims. Will return true if the
+ * token is within the time window authorized by the 'nbf' (not-before) and 'iat' (issued-at) claims.
+ *
+ * Notes:
+ * - May return a false negative if there's no native base64 decoding support.
+ * - Doesn't check if the token is actually valid.
+ *
+ * @param {?string} token
+ * @return {boolean}
+ */
+var isValidTimestamp = function (token) {
+    var claims = decode(token).claims, now = Math.floor(new Date().getTime() / 1000), validSince, validUntil;
+    if (typeof claims === 'object') {
+        if (claims.hasOwnProperty('nbf')) {
+            validSince = claims['nbf'];
+        }
+        else if (claims.hasOwnProperty('iat')) {
+            validSince = claims['iat'];
+        }
+        if (claims.hasOwnProperty('exp')) {
+            validUntil = claims['exp'];
+        }
+        else {
+            // token will expire after 24h by default
+            validUntil = validSince + 86400;
+        }
+    }
+    return (now && validSince && validUntil && now >= validSince && now <= validUntil);
+};
+/**
+ * Decodes a Firebase auth. token and returns its issued at time if valid, null otherwise.
+ *
+ * Notes:
+ * - May return null if there's no native base64 decoding support.
+ * - Doesn't check if the token is actually valid.
+ *
+ * @param {?string} token
+ * @return {?number}
+ */
+var issuedAtTime = function (token) {
+    var claims = decode(token).claims;
+    if (typeof claims === 'object' && claims.hasOwnProperty('iat')) {
+        return claims['iat'];
+    }
+    return null;
+};
+/**
+ * Decodes a Firebase auth. token and checks the validity of its format. Expects a valid issued-at time and non-empty
+ * signature.
+ *
+ * Notes:
+ * - May return a false negative if there's no native base64 decoding support.
+ * - Doesn't check if the token is actually valid.
+ *
+ * @param {?string} token
+ * @return {boolean}
+ */
+var isValidFormat = function (token) {
+    var decoded = decode(token), claims = decoded.claims;
+    return (!!decoded.signature &&
+        !!claims &&
+        typeof claims === 'object' &&
+        claims.hasOwnProperty('iat'));
+};
+/**
+ * Attempts to peer into an auth token and determine if it's an admin auth token by looking at the claims portion.
+ *
+ * Notes:
+ * - May return a false negative if there's no native base64 decoding support.
+ * - Doesn't check if the token is actually valid.
+ *
+ * @param {?string} token
+ * @return {boolean}
+ */
+var isAdmin = function (token) {
+    var claims = decode(token).claims;
+    return typeof claims === 'object' && claims['admin'] === true;
+};
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// See http://www.devthought.com/2012/01/18/an-object-is-not-a-hash/
+var contains = function (obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+};
+var safeGet = function (obj, key) {
+    if (Object.prototype.hasOwnProperty.call(obj, key))
+        return obj[key];
+    // else return undefined.
+};
+/**
+ * Enumerates the keys/values in an object, excluding keys defined on the prototype.
+ *
+ * @param {?Object.<K,V>} obj Object to enumerate.
+ * @param {!function(K, V)} fn Function to call for each key and value.
+ * @template K,V
+ */
+var forEach = function (obj, fn) {
+    for (var key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            fn(key, obj[key]);
+        }
+    }
+};
+/**
+ * Copies all the (own) properties from one object to another.
+ * @param {!Object} objTo
+ * @param {!Object} objFrom
+ * @return {!Object} objTo
+ */
+var extend = function (objTo, objFrom) {
+    forEach(objFrom, function (key, value) {
+        objTo[key] = value;
+    });
+    return objTo;
+};
+/**
+ * Returns a clone of the specified object.
+ * @param {!Object} obj
+ * @return {!Object} cloned obj.
+ */
+var clone = function (obj) {
+    return extend({}, obj);
+};
+/**
+ * Returns true if obj has typeof "object" and is not null.  Unlike goog.isObject(), does not return true
+ * for functions.
+ *
+ * @param obj {*} A potential object.
+ * @returns {boolean} True if it's an object.
+ */
+var isNonNullObject = function (obj) {
+    return typeof obj === 'object' && obj !== null;
+};
+var isEmpty = function (obj) {
+    for (var key in obj) {
+        return false;
+    }
+    return true;
+};
+var getCount = function (obj) {
+    var rv = 0;
+    for (var key in obj) {
+        rv++;
+    }
+    return rv;
+};
+var map = function (obj, f, opt_obj) {
+    var res = {};
+    for (var key in obj) {
+        res[key] = f.call(opt_obj, obj[key], key, obj);
+    }
+    return res;
+};
+var findKey = function (obj, fn, opt_this) {
+    for (var key in obj) {
+        if (fn.call(opt_this, obj[key], key, obj)) {
+            return key;
+        }
+    }
+    return undefined;
+};
+var findValue = function (obj, fn, opt_this) {
+    var key = findKey(obj, fn, opt_this);
+    return key && obj[key];
+};
+var getAnyKey = function (obj) {
+    for (var key in obj) {
+        return key;
+    }
+};
+var getValues = function (obj) {
+    var res = [];
+    var i = 0;
+    for (var key in obj) {
+        res[i++] = obj[key];
+    }
+    return res;
+};
+/**
+ * Tests whether every key/value pair in an object pass the test implemented
+ * by the provided function
+ *
+ * @param {?Object.<K,V>} obj Object to test.
+ * @param {!function(K, V)} fn Function to call for each key and value.
+ * @template K,V
+ */
+var every = function (obj, fn) {
+    for (var key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            if (!fn(key, obj[key])) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Returns a querystring-formatted string (e.g. &arg=val&arg2=val2) from a params
+ * object (e.g. {arg: 'val', arg2: 'val2'})
+ * Note: You must prepend it with ? when adding it to a URL.
+ *
+ * @param {!Object} querystringParams
+ * @return {string}
+ */
+var querystring = function (querystringParams) {
+    var params = [];
+    forEach(querystringParams, function (key, value) {
+        if (Array.isArray(value)) {
+            value.forEach(function (arrayVal) {
+                params.push(encodeURIComponent(key) + '=' + encodeURIComponent(arrayVal));
+            });
+        }
+        else {
+            params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+        }
+    });
+    return params.length ? '&' + params.join('&') : '';
+};
+/**
+ * Decodes a querystring (e.g. ?arg=val&arg2=val2) into a params object (e.g. {arg: 'val', arg2: 'val2'})
+ *
+ * @param {string} querystring
+ * @return {!Object}
+ */
+var querystringDecode = function (querystring) {
+    var obj = {};
+    var tokens = querystring.replace(/^\?/, '').split('&');
+    tokens.forEach(function (token) {
+        if (token) {
+            var key = token.split('=');
+            obj[key[0]] = key[1];
+        }
+    });
+    return obj;
+};
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// Copyright 2011 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+/**
+ * @fileoverview Abstract cryptographic hash interface.
+ *
+ * See Sha1 and Md5 for sample implementations.
+ *
+ */
+/**
+ * Create a cryptographic hash instance.
+ *
+ * @constructor
+ * @struct
+ */
+var Hash = /** @class */ (function () {
+    function Hash() {
+        /**
+         * The block size for the hasher.
+         * @type {number}
+         */
+        this.blockSize = -1;
+    }
+    return Hash;
+}());
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * @fileoverview SHA-1 cryptographic hash.
+ * Variable names follow the notation in FIPS PUB 180-3:
+ * http://csrc.nist.gov/publications/fips/fips180-3/fips180-3_final.pdf.
+ *
+ * Usage:
+ *   var sha1 = new sha1();
+ *   sha1.update(bytes);
+ *   var hash = sha1.digest();
+ *
+ * Performance:
+ *   Chrome 23:   ~400 Mbit/s
+ *   Firefox 16:  ~250 Mbit/s
+ *
+ */
+/**
+ * SHA-1 cryptographic hash constructor.
+ *
+ * The properties declared here are discussed in the above algorithm document.
+ * @constructor
+ * @extends {Hash}
+ * @final
+ * @struct
+ */
+var Sha1 = /** @class */ (function (_super) {
+    tslib_1.__extends(Sha1, _super);
+    function Sha1() {
+        var _this = _super.call(this) || this;
+        /**
+         * Holds the previous values of accumulated variables a-e in the compress_
+         * function.
+         * @type {!Array<number>}
+         * @private
+         */
+        _this.chain_ = [];
+        /**
+         * A buffer holding the partially computed hash result.
+         * @type {!Array<number>}
+         * @private
+         */
+        _this.buf_ = [];
+        /**
+         * An array of 80 bytes, each a part of the message to be hashed.  Referred to
+         * as the message schedule in the docs.
+         * @type {!Array<number>}
+         * @private
+         */
+        _this.W_ = [];
+        /**
+         * Contains data needed to pad messages less than 64 bytes.
+         * @type {!Array<number>}
+         * @private
+         */
+        _this.pad_ = [];
+        /**
+         * @private {number}
+         */
+        _this.inbuf_ = 0;
+        /**
+         * @private {number}
+         */
+        _this.total_ = 0;
+        _this.blockSize = 512 / 8;
+        _this.pad_[0] = 128;
+        for (var i = 1; i < _this.blockSize; ++i) {
+            _this.pad_[i] = 0;
+        }
+        _this.reset();
+        return _this;
+    }
+    Sha1.prototype.reset = function () {
+        this.chain_[0] = 0x67452301;
+        this.chain_[1] = 0xefcdab89;
+        this.chain_[2] = 0x98badcfe;
+        this.chain_[3] = 0x10325476;
+        this.chain_[4] = 0xc3d2e1f0;
+        this.inbuf_ = 0;
+        this.total_ = 0;
+    };
+    /**
+     * Internal compress helper function.
+     * @param {!Array<number>|!Uint8Array|string} buf Block to compress.
+     * @param {number=} opt_offset Offset of the block in the buffer.
+     * @private
+     */
+    Sha1.prototype.compress_ = function (buf, opt_offset) {
+        if (!opt_offset) {
+            opt_offset = 0;
+        }
+        var W = this.W_;
+        // get 16 big endian words
+        if (typeof buf === 'string') {
+            for (var i = 0; i < 16; i++) {
+                // TODO(user): [bug 8140122] Recent versions of Safari for Mac OS and iOS
+                // have a bug that turns the post-increment ++ operator into pre-increment
+                // during JIT compilation.  We have code that depends heavily on SHA-1 for
+                // correctness and which is affected by this bug, so I've removed all uses
+                // of post-increment ++ in which the result value is used.  We can revert
+                // this change once the Safari bug
+                // (https://bugs.webkit.org/show_bug.cgi?id=109036) has been fixed and
+                // most clients have been updated.
+                W[i] =
+                    (buf.charCodeAt(opt_offset) << 24) |
+                        (buf.charCodeAt(opt_offset + 1) << 16) |
+                        (buf.charCodeAt(opt_offset + 2) << 8) |
+                        buf.charCodeAt(opt_offset + 3);
+                opt_offset += 4;
+            }
+        }
+        else {
+            for (var i = 0; i < 16; i++) {
+                W[i] =
+                    (buf[opt_offset] << 24) |
+                        (buf[opt_offset + 1] << 16) |
+                        (buf[opt_offset + 2] << 8) |
+                        buf[opt_offset + 3];
+                opt_offset += 4;
+            }
+        }
+        // expand to 80 words
+        for (var i = 16; i < 80; i++) {
+            var t = W[i - 3] ^ W[i - 8] ^ W[i - 14] ^ W[i - 16];
+            W[i] = ((t << 1) | (t >>> 31)) & 0xffffffff;
+        }
+        var a = this.chain_[0];
+        var b = this.chain_[1];
+        var c = this.chain_[2];
+        var d = this.chain_[3];
+        var e = this.chain_[4];
+        var f, k;
+        // TODO(user): Try to unroll this loop to speed up the computation.
+        for (var i = 0; i < 80; i++) {
+            if (i < 40) {
+                if (i < 20) {
+                    f = d ^ (b & (c ^ d));
+                    k = 0x5a827999;
+                }
+                else {
+                    f = b ^ c ^ d;
+                    k = 0x6ed9eba1;
+                }
+            }
+            else {
+                if (i < 60) {
+                    f = (b & c) | (d & (b | c));
+                    k = 0x8f1bbcdc;
+                }
+                else {
+                    f = b ^ c ^ d;
+                    k = 0xca62c1d6;
+                }
+            }
+            var t = (((a << 5) | (a >>> 27)) + f + e + k + W[i]) & 0xffffffff;
+            e = d;
+            d = c;
+            c = ((b << 30) | (b >>> 2)) & 0xffffffff;
+            b = a;
+            a = t;
+        }
+        this.chain_[0] = (this.chain_[0] + a) & 0xffffffff;
+        this.chain_[1] = (this.chain_[1] + b) & 0xffffffff;
+        this.chain_[2] = (this.chain_[2] + c) & 0xffffffff;
+        this.chain_[3] = (this.chain_[3] + d) & 0xffffffff;
+        this.chain_[4] = (this.chain_[4] + e) & 0xffffffff;
+    };
+    Sha1.prototype.update = function (bytes, opt_length) {
+        // TODO(johnlenz): tighten the function signature and remove this check
+        if (bytes == null) {
+            return;
+        }
+        if (opt_length === undefined) {
+            opt_length = bytes.length;
+        }
+        var lengthMinusBlock = opt_length - this.blockSize;
+        var n = 0;
+        // Using local instead of member variables gives ~5% speedup on Firefox 16.
+        var buf = this.buf_;
+        var inbuf = this.inbuf_;
+        // The outer while loop should execute at most twice.
+        while (n < opt_length) {
+            // When we have no data in the block to top up, we can directly process the
+            // input buffer (assuming it contains sufficient data). This gives ~25%
+            // speedup on Chrome 23 and ~15% speedup on Firefox 16, but requires that
+            // the data is provided in large chunks (or in multiples of 64 bytes).
+            if (inbuf == 0) {
+                while (n <= lengthMinusBlock) {
+                    this.compress_(bytes, n);
+                    n += this.blockSize;
+                }
+            }
+            if (typeof bytes === 'string') {
+                while (n < opt_length) {
+                    buf[inbuf] = bytes.charCodeAt(n);
+                    ++inbuf;
+                    ++n;
+                    if (inbuf == this.blockSize) {
+                        this.compress_(buf);
+                        inbuf = 0;
+                        // Jump to the outer loop so we use the full-block optimization.
+                        break;
+                    }
+                }
+            }
+            else {
+                while (n < opt_length) {
+                    buf[inbuf] = bytes[n];
+                    ++inbuf;
+                    ++n;
+                    if (inbuf == this.blockSize) {
+                        this.compress_(buf);
+                        inbuf = 0;
+                        // Jump to the outer loop so we use the full-block optimization.
+                        break;
+                    }
+                }
+            }
+        }
+        this.inbuf_ = inbuf;
+        this.total_ += opt_length;
+    };
+    /** @override */
+    Sha1.prototype.digest = function () {
+        var digest = [];
+        var totalBits = this.total_ * 8;
+        // Add pad 0x80 0x00*.
+        if (this.inbuf_ < 56) {
+            this.update(this.pad_, 56 - this.inbuf_);
+        }
+        else {
+            this.update(this.pad_, this.blockSize - (this.inbuf_ - 56));
+        }
+        // Add # bits.
+        for (var i = this.blockSize - 1; i >= 56; i--) {
+            this.buf_[i] = totalBits & 255;
+            totalBits /= 256; // Don't use bit-shifting here!
+        }
+        this.compress_(this.buf_);
+        var n = 0;
+        for (var i = 0; i < 5; i++) {
+            for (var j = 24; j >= 0; j -= 8) {
+                digest[n] = (this.chain_[i] >> j) & 255;
+                ++n;
+            }
+        }
+        return digest;
+    };
+    return Sha1;
+}(Hash));
+
+/**
+ * Helper to make a Subscribe function (just like Promise helps make a
+ * Thenable).
+ *
+ * @param executor Function which can make calls to a single Observer
+ *     as a proxy.
+ * @param onNoObservers Callback when count of Observers goes to zero.
+ */
+function createSubscribe(executor, onNoObservers) {
+    var proxy = new ObserverProxy(executor, onNoObservers);
+    return proxy.subscribe.bind(proxy);
+}
+/**
+ * Implement fan-out for any number of Observers attached via a subscribe
+ * function.
+ */
+var ObserverProxy = /** @class */ (function () {
+    /**
+     * @param executor Function which can make calls to a single Observer
+     *     as a proxy.
+     * @param onNoObservers Callback when count of Observers goes to zero.
+     */
+    function ObserverProxy(executor, onNoObservers) {
+        var _this = this;
+        this.observers = [];
+        this.unsubscribes = [];
+        this.observerCount = 0;
+        // Micro-task scheduling by calling task.then().
+        this.task = Promise.resolve();
+        this.finalized = false;
+        this.onNoObservers = onNoObservers;
+        // Call the executor asynchronously so subscribers that are called
+        // synchronously after the creation of the subscribe function
+        // can still receive the very first value generated in the executor.
+        this.task
+            .then(function () {
+            executor(_this);
+        })
+            .catch(function (e) {
+            _this.error(e);
+        });
+    }
+    ObserverProxy.prototype.next = function (value) {
+        this.forEachObserver(function (observer) {
+            observer.next(value);
+        });
+    };
+    ObserverProxy.prototype.error = function (error) {
+        this.forEachObserver(function (observer) {
+            observer.error(error);
+        });
+        this.close(error);
+    };
+    ObserverProxy.prototype.complete = function () {
+        this.forEachObserver(function (observer) {
+            observer.complete();
+        });
+        this.close();
+    };
+    /**
+     * Subscribe function that can be used to add an Observer to the fan-out list.
+     *
+     * - We require that no event is sent to a subscriber sychronously to their
+     *   call to subscribe().
+     */
+    ObserverProxy.prototype.subscribe = function (nextOrObserver, error, complete) {
+        var _this = this;
+        var observer;
+        if (nextOrObserver === undefined &&
+            error === undefined &&
+            complete === undefined) {
+            throw new Error('Missing Observer.');
+        }
+        // Assemble an Observer object when passed as callback functions.
+        if (implementsAnyMethods(nextOrObserver, ['next', 'error', 'complete'])) {
+            observer = nextOrObserver;
+        }
+        else {
+            observer = {
+                next: nextOrObserver,
+                error: error,
+                complete: complete
+            };
+        }
+        if (observer.next === undefined) {
+            observer.next = noop;
+        }
+        if (observer.error === undefined) {
+            observer.error = noop;
+        }
+        if (observer.complete === undefined) {
+            observer.complete = noop;
+        }
+        var unsub = this.unsubscribeOne.bind(this, this.observers.length);
+        // Attempt to subscribe to a terminated Observable - we
+        // just respond to the Observer with the final error or complete
+        // event.
+        if (this.finalized) {
+            this.task.then(function () {
+                try {
+                    if (_this.finalError) {
+                        observer.error(_this.finalError);
+                    }
+                    else {
+                        observer.complete();
+                    }
+                }
+                catch (e) {
+                    // nothing
+                }
+                return;
+            });
+        }
+        this.observers.push(observer);
+        return unsub;
+    };
+    // Unsubscribe is synchronous - we guarantee that no events are sent to
+    // any unsubscribed Observer.
+    ObserverProxy.prototype.unsubscribeOne = function (i) {
+        if (this.observers === undefined || this.observers[i] === undefined) {
+            return;
+        }
+        delete this.observers[i];
+        this.observerCount -= 1;
+        if (this.observerCount === 0 && this.onNoObservers !== undefined) {
+            this.onNoObservers(this);
+        }
+    };
+    ObserverProxy.prototype.forEachObserver = function (fn) {
+        if (this.finalized) {
+            // Already closed by previous event....just eat the additional values.
+            return;
+        }
+        // Since sendOne calls asynchronously - there is no chance that
+        // this.observers will become undefined.
+        for (var i = 0; i < this.observers.length; i++) {
+            this.sendOne(i, fn);
+        }
+    };
+    // Call the Observer via one of it's callback function. We are careful to
+    // confirm that the observe has not been unsubscribed since this asynchronous
+    // function had been queued.
+    ObserverProxy.prototype.sendOne = function (i, fn) {
+        var _this = this;
+        // Execute the callback asynchronously
+        this.task.then(function () {
+            if (_this.observers !== undefined && _this.observers[i] !== undefined) {
+                try {
+                    fn(_this.observers[i]);
+                }
+                catch (e) {
+                    // Ignore exceptions raised in Observers or missing methods of an
+                    // Observer.
+                    // Log error to console. b/31404806
+                    if (typeof console !== 'undefined' && console.error) {
+                        console.error(e);
+                    }
+                }
+            }
+        });
+    };
+    ObserverProxy.prototype.close = function (err) {
+        var _this = this;
+        if (this.finalized) {
+            return;
+        }
+        this.finalized = true;
+        if (err !== undefined) {
+            this.finalError = err;
+        }
+        // Proxy is no longer needed - garbage collect references
+        this.task.then(function () {
+            _this.observers = undefined;
+            _this.onNoObservers = undefined;
+        });
+    };
+    return ObserverProxy;
+}());
+/** Turn synchronous function into one called asynchronously. */
+function async(fn, onError) {
+    return function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        Promise.resolve(true)
+            .then(function () {
+            fn.apply(void 0, args);
+        })
+            .catch(function (error) {
+            if (onError) {
+                onError(error);
+            }
+        });
+    };
+}
+/**
+ * Return true if the object passed in implements any of the named methods.
+ */
+function implementsAnyMethods(obj, methods) {
+    if (typeof obj !== 'object' || obj === null) {
+        return false;
+    }
+    for (var _i = 0, methods_1 = methods; _i < methods_1.length; _i++) {
+        var method = methods_1[_i];
+        if (method in obj && typeof obj[method] === 'function') {
+            return true;
+        }
+    }
+    return false;
+}
+function noop() {
+    // do nothing
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Check to make sure the appropriate number of arguments are provided for a public function.
+ * Throws an error if it fails.
+ *
+ * @param {!string} fnName The function name
+ * @param {!number} minCount The minimum number of arguments to allow for the function call
+ * @param {!number} maxCount The maximum number of argument to allow for the function call
+ * @param {!number} argCount The actual number of arguments provided.
+ */
+var validateArgCount = function (fnName, minCount, maxCount, argCount) {
+    var argError;
+    if (argCount < minCount) {
+        argError = 'at least ' + minCount;
+    }
+    else if (argCount > maxCount) {
+        argError = maxCount === 0 ? 'none' : 'no more than ' + maxCount;
+    }
+    if (argError) {
+        var error = fnName +
+            ' failed: Was called with ' +
+            argCount +
+            (argCount === 1 ? ' argument.' : ' arguments.') +
+            ' Expects ' +
+            argError +
+            '.';
+        throw new Error(error);
+    }
+};
+/**
+ * Generates a string to prefix an error message about failed argument validation
+ *
+ * @param {!string} fnName The function name
+ * @param {!number} argumentNumber The index of the argument
+ * @param {boolean} optional Whether or not the argument is optional
+ * @return {!string} The prefix to add to the error thrown for validation.
+ */
+function errorPrefix(fnName, argumentNumber, optional) {
+    var argName = '';
+    switch (argumentNumber) {
+        case 1:
+            argName = optional ? 'first' : 'First';
+            break;
+        case 2:
+            argName = optional ? 'second' : 'Second';
+            break;
+        case 3:
+            argName = optional ? 'third' : 'Third';
+            break;
+        case 4:
+            argName = optional ? 'fourth' : 'Fourth';
+            break;
+        default:
+            throw new Error('errorPrefix called with argumentNumber > 4.  Need to update it?');
+    }
+    var error = fnName + ' failed: ';
+    error += argName + ' argument ';
+    return error;
+}
+/**
+ * @param {!string} fnName
+ * @param {!number} argumentNumber
+ * @param {!string} namespace
+ * @param {boolean} optional
+ */
+function validateNamespace(fnName, argumentNumber, namespace, optional) {
+    if (optional && !namespace)
+        return;
+    if (typeof namespace !== 'string') {
+        //TODO: I should do more validation here. We only allow certain chars in namespaces.
+        throw new Error(errorPrefix(fnName, argumentNumber, optional) +
+            'must be a valid firebase namespace.');
+    }
+}
+function validateCallback(fnName, argumentNumber, callback, optional) {
+    if (optional && !callback)
+        return;
+    if (typeof callback !== 'function')
+        throw new Error(errorPrefix(fnName, argumentNumber, optional) +
+            'must be a valid function.');
+}
+function validateContextObject(fnName, argumentNumber, context, optional) {
+    if (optional && !context)
+        return;
+    if (typeof context !== 'object' || context === null)
+        throw new Error(errorPrefix(fnName, argumentNumber, optional) +
+            'must be a valid context object.');
+}
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// Code originally came from goog.crypt.stringToUtf8ByteArray, but for some reason they
+// automatically replaced '\r\n' with '\n', and they didn't handle surrogate pairs,
+// so it's been modified.
+// Note that not all Unicode characters appear as single characters in JavaScript strings.
+// fromCharCode returns the UTF-16 encoding of a character - so some Unicode characters
+// use 2 characters in Javascript.  All 4-byte UTF-8 characters begin with a first
+// character in the range 0xD800 - 0xDBFF (the first character of a so-called surrogate
+// pair).
+// See http://www.ecma-international.org/ecma-262/5.1/#sec-15.1.3
+/**
+ * @param {string} str
+ * @return {Array}
+ */
+var stringToByteArray$1 = function (str) {
+    var out = [], p = 0;
+    for (var i = 0; i < str.length; i++) {
+        var c = str.charCodeAt(i);
+        // Is this the lead surrogate in a surrogate pair?
+        if (c >= 0xd800 && c <= 0xdbff) {
+            var high = c - 0xd800; // the high 10 bits.
+            i++;
+            assert(i < str.length, 'Surrogate pair missing trail surrogate.');
+            var low = str.charCodeAt(i) - 0xdc00; // the low 10 bits.
+            c = 0x10000 + (high << 10) + low;
+        }
+        if (c < 128) {
+            out[p++] = c;
+        }
+        else if (c < 2048) {
+            out[p++] = (c >> 6) | 192;
+            out[p++] = (c & 63) | 128;
+        }
+        else if (c < 65536) {
+            out[p++] = (c >> 12) | 224;
+            out[p++] = ((c >> 6) & 63) | 128;
+            out[p++] = (c & 63) | 128;
+        }
+        else {
+            out[p++] = (c >> 18) | 240;
+            out[p++] = ((c >> 12) & 63) | 128;
+            out[p++] = ((c >> 6) & 63) | 128;
+            out[p++] = (c & 63) | 128;
+        }
+    }
+    return out;
+};
+/**
+ * Calculate length without actually converting; useful for doing cheaper validation.
+ * @param {string} str
+ * @return {number}
+ */
+var stringLength = function (str) {
+    var p = 0;
+    for (var i = 0; i < str.length; i++) {
+        var c = str.charCodeAt(i);
+        if (c < 128) {
+            p++;
+        }
+        else if (c < 2048) {
+            p += 2;
+        }
+        else if (c >= 0xd800 && c <= 0xdbff) {
+            // Lead surrogate of a surrogate pair.  The pair together will take 4 bytes to represent.
+            p += 4;
+            i++; // skip trail surrogate.
+        }
+        else {
+            p += 3;
+        }
+    }
+    return p;
+};
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+exports.assert = assert;
+exports.assertionError = assertionError;
+exports.base64 = base64;
+exports.base64Decode = base64Decode;
+exports.base64Encode = base64Encode;
+exports.CONSTANTS = CONSTANTS;
+exports.deepCopy = deepCopy;
+exports.deepExtend = deepExtend;
+exports.patchProperty = patchProperty;
+exports.Deferred = Deferred;
+exports.getUA = getUA;
+exports.isMobileCordova = isMobileCordova;
+exports.isNodeSdk = isNodeSdk;
+exports.isReactNative = isReactNative;
+exports.ErrorFactory = ErrorFactory;
+exports.FirebaseError = FirebaseError;
+exports.patchCapture = patchCapture;
+exports.jsonEval = jsonEval;
+exports.stringify = stringify;
+exports.decode = decode;
+exports.isAdmin = isAdmin;
+exports.issuedAtTime = issuedAtTime;
+exports.isValidFormat = isValidFormat;
+exports.isValidTimestamp = isValidTimestamp;
+exports.clone = clone;
+exports.contains = contains;
+exports.every = every;
+exports.extend = extend;
+exports.findKey = findKey;
+exports.findValue = findValue;
+exports.forEach = forEach;
+exports.getAnyKey = getAnyKey;
+exports.getCount = getCount;
+exports.getValues = getValues;
+exports.isEmpty = isEmpty;
+exports.isNonNullObject = isNonNullObject;
+exports.map = map;
+exports.safeGet = safeGet;
+exports.querystring = querystring;
+exports.querystringDecode = querystringDecode;
+exports.Sha1 = Sha1;
+exports.async = async;
+exports.createSubscribe = createSubscribe;
+exports.errorPrefix = errorPrefix;
+exports.validateArgCount = validateArgCount;
+exports.validateCallback = validateCallback;
+exports.validateContextObject = validateContextObject;
+exports.validateNamespace = validateNamespace;
+exports.stringLength = stringLength;
+exports.stringToByteArray = stringToByteArray$1;
+
+
+/***/ }),
+
+/***/ "./node_modules/@firebase/util/node_modules/tslib/tslib.es6.js":
+/*!*********************************************************************!*\
+  !*** ./node_modules/@firebase/util/node_modules/tslib/tslib.es6.js ***!
+  \*********************************************************************/
+/*! exports provided: __extends, __assign, __rest, __decorate, __param, __metadata, __awaiter, __generator, __exportStar, __values, __read, __spread, __await, __asyncGenerator, __asyncDelegator, __asyncValues, __makeTemplateObject, __importStar, __importDefault */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__extends", function() { return __extends; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__assign", function() { return __assign; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__rest", function() { return __rest; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__decorate", function() { return __decorate; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__param", function() { return __param; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__metadata", function() { return __metadata; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__awaiter", function() { return __awaiter; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__generator", function() { return __generator; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__exportStar", function() { return __exportStar; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__values", function() { return __values; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__read", function() { return __read; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__spread", function() { return __spread; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__await", function() { return __await; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__asyncGenerator", function() { return __asyncGenerator; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__asyncDelegator", function() { return __asyncDelegator; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__asyncValues", function() { return __asyncValues; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__makeTemplateObject", function() { return __makeTemplateObject; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__importStar", function() { return __importStar; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__importDefault", function() { return __importDefault; });
+/*! *****************************************************************************
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
+***************************************************************************** */
+/* global Reflect, Promise */
+
+var extendStatics = Object.setPrototypeOf ||
+    ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+    function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+
+function __extends(d, b) {
+    extendStatics(d, b);
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+}
+
+var __assign = Object.assign || function __assign(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+    }
+    return t;
+}
+
+function __rest(s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) if (e.indexOf(p[i]) < 0)
+            t[p[i]] = s[p[i]];
+    return t;
+}
+
+function __decorate(decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+}
+
+function __param(paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+}
+
+function __metadata(metadataKey, metadataValue) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(metadataKey, metadataValue);
+}
+
+function __awaiter(thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+}
+
+function __generator(thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = y[op[0] & 2 ? "return" : op[0] ? "throw" : "next"]) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [0, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+}
+
+function __exportStar(m, exports) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+
+function __values(o) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    if (m) return m.call(o);
+    return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+}
+
+function __read(o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+}
+
+function __spread() {
+    for (var ar = [], i = 0; i < arguments.length; i++)
+        ar = ar.concat(__read(arguments[i]));
+    return ar;
+}
+
+function __await(v) {
+    return this instanceof __await ? (this.v = v, this) : new __await(v);
+}
+
+function __asyncGenerator(thisArg, _arguments, generator) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var g = generator.apply(thisArg, _arguments || []), i, q = [];
+    return i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i;
+    function verb(n) { if (g[n]) i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; }
+    function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
+    function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r);  }
+    function fulfill(value) { resume("next", value); }
+    function reject(value) { resume("throw", value); }
+    function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
+}
+
+function __asyncDelegator(o) {
+    var i, p;
+    return i = {}, verb("next"), verb("throw", function (e) { throw e; }), verb("return"), i[Symbol.iterator] = function () { return this; }, i;
+    function verb(n, f) { if (o[n]) i[n] = function (v) { return (p = !p) ? { value: __await(o[n](v)), done: n === "return" } : f ? f(v) : v; }; }
+}
+
+function __asyncValues(o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator];
+    return m ? m.call(o) : typeof __values === "function" ? __values(o) : o[Symbol.iterator]();
+}
+
+function __makeTemplateObject(cooked, raw) {
+    if (Object.defineProperty) { Object.defineProperty(cooked, "raw", { value: raw }); } else { cooked.raw = raw; }
+    return cooked;
+};
+
+function __importStar(mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result.default = mod;
+    return result;
+}
+
+function __importDefault(mod) {
+    return (mod && mod.__esModule) ? mod : { default: mod };
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/angularfire2.js":
+/*!***************************************************!*\
+  !*** ./node_modules/angularfire2/angularfire2.js ***!
+  \***************************************************/
+/*! exports provided: RealtimeDatabaseURL, FirebaseZoneScheduler, runOutsideAngular */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "RealtimeDatabaseURL", function() { return RealtimeDatabaseURL; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FirebaseZoneScheduler", function() { return FirebaseZoneScheduler; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "runOutsideAngular", function() { return runOutsideAngular; });
+/* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
+/* harmony import */ var _angular_common__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @angular/common */ "./node_modules/@angular/common/fesm5/common.js");
+/* harmony import */ var rxjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! rxjs */ "./node_modules/rxjs/_esm5/index.js");
+
+
+
+var RealtimeDatabaseURL = new _angular_core__WEBPACK_IMPORTED_MODULE_0__["InjectionToken"]('angularfire2.realtimeDatabaseURL');
+var FirebaseZoneScheduler = (function () {
+    function FirebaseZoneScheduler(zone, platformId) {
+        this.zone = zone;
+        this.platformId = platformId;
+    }
+    FirebaseZoneScheduler.prototype.schedule = function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        return this.zone.runGuarded(function () { return rxjs__WEBPACK_IMPORTED_MODULE_2__["queueScheduler"].schedule.apply(rxjs__WEBPACK_IMPORTED_MODULE_2__["queueScheduler"], args); });
+    };
+    FirebaseZoneScheduler.prototype.keepUnstableUntilFirst = function (obs$) {
+        if (Object(_angular_common__WEBPACK_IMPORTED_MODULE_1__["isPlatformServer"])(this.platformId)) {
+            return new rxjs__WEBPACK_IMPORTED_MODULE_2__["Observable"](function (subscriber) {
+                var noop = function () { };
+                var task = Zone.current.scheduleMacroTask('firebaseZoneBlock', noop, {}, noop, noop);
+                obs$.subscribe(function (next) {
+                    if (task.state === 'scheduled') {
+                        task.invoke();
+                    }
+                    ;
+                    subscriber.next(next);
+                }, function (error) {
+                    if (task.state === 'scheduled') {
+                        task.invoke();
+                    }
+                    subscriber.error(error);
+                }, function () {
+                    if (task.state === 'scheduled') {
+                        task.invoke();
+                    }
+                    subscriber.complete();
+                });
+            });
+        }
+        else {
+            return obs$;
+        }
+    };
+    FirebaseZoneScheduler.prototype.runOutsideAngular = function (obs$) {
+        var _this = this;
+        return new rxjs__WEBPACK_IMPORTED_MODULE_2__["Observable"](function (subscriber) {
+            return _this.zone.runOutsideAngular(function () {
+                return obs$.subscribe(function (value) { return _this.zone.run(function () { return subscriber.next(value); }); }, function (error) { return _this.zone.run(function () { return subscriber.error(error); }); }, function () { return _this.zone.run(function () { return subscriber.complete(); }); });
+            });
+        });
+    };
+    return FirebaseZoneScheduler;
+}());
+
+var runOutsideAngular = function (zone) { return function (obs$) {
+    return new rxjs__WEBPACK_IMPORTED_MODULE_2__["Observable"](function (subscriber) {
+        return zone.runOutsideAngular(function () {
+            return obs$.subscribe(function (value) { return zone.run(function () { return subscriber.next(value); }); }, function (error) { return zone.run(function () { return subscriber.error(error); }); }, function () { return zone.run(function () { return subscriber.complete(); }); });
+        });
+    });
+}; };
+//# sourceMappingURL=angularfire2.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/firebase.app.module.js":
+/*!**********************************************************!*\
+  !*** ./node_modules/angularfire2/firebase.app.module.js ***!
+  \**********************************************************/
+/*! exports provided: FirebaseOptionsToken, FirebaseNameOrConfigToken, FirebaseApp, _firebaseAppFactory, AngularFireModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FirebaseOptionsToken", function() { return FirebaseOptionsToken; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FirebaseNameOrConfigToken", function() { return FirebaseNameOrConfigToken; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FirebaseApp", function() { return FirebaseApp; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "_firebaseAppFactory", function() { return _firebaseAppFactory; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AngularFireModule", function() { return AngularFireModule; });
+/* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
+/* harmony import */ var firebase_app__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! firebase/app */ "./node_modules/firebase/app/dist/index.cjs.js");
+/* harmony import */ var firebase_app__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(firebase_app__WEBPACK_IMPORTED_MODULE_1__);
+
+
+var FirebaseOptionsToken = new _angular_core__WEBPACK_IMPORTED_MODULE_0__["InjectionToken"]('angularfire2.app.options');
+var FirebaseNameOrConfigToken = new _angular_core__WEBPACK_IMPORTED_MODULE_0__["InjectionToken"]('angularfire2.app.nameOrConfig');
+var FirebaseApp = (function () {
+    function FirebaseApp() {
+    }
+    return FirebaseApp;
+}());
+
+function _firebaseAppFactory(options, nameOrConfig) {
+    var name = typeof nameOrConfig === 'string' && nameOrConfig || '[DEFAULT]';
+    var config = typeof nameOrConfig === 'object' && nameOrConfig || {};
+    config.name = config.name || name;
+    var existingApp = firebase_app__WEBPACK_IMPORTED_MODULE_1___default.a.apps.filter(function (app) { return app && app.name === config.name; })[0];
+    return (existingApp || firebase_app__WEBPACK_IMPORTED_MODULE_1___default.a.initializeApp(options, config));
+}
+var FirebaseAppProvider = {
+    provide: FirebaseApp,
+    useFactory: _firebaseAppFactory,
+    deps: [
+        FirebaseOptionsToken,
+        [new _angular_core__WEBPACK_IMPORTED_MODULE_0__["Optional"](), FirebaseNameOrConfigToken]
+    ]
+};
+var AngularFireModule = (function () {
+    function AngularFireModule() {
+    }
+    AngularFireModule.initializeApp = function (options, nameOrConfig) {
+        return {
+            ngModule: AngularFireModule,
+            providers: [
+                { provide: FirebaseOptionsToken, useValue: options },
+                { provide: FirebaseNameOrConfigToken, useValue: nameOrConfig }
+            ]
+        };
+    };
+    AngularFireModule.decorators = [
+        { type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["NgModule"], args: [{
+                    providers: [FirebaseAppProvider],
+                },] },
+    ];
+    return AngularFireModule;
+}());
+
+//# sourceMappingURL=firebase.app.module.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/index.js":
+/*!********************************************!*\
+  !*** ./node_modules/angularfire2/index.js ***!
+  \********************************************/
+/*! exports provided: RealtimeDatabaseURL, FirebaseZoneScheduler, runOutsideAngular, FirebaseOptionsToken, FirebaseNameOrConfigToken, FirebaseApp, _firebaseAppFactory, AngularFireModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _public_api__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./public_api */ "./node_modules/angularfire2/public_api.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "RealtimeDatabaseURL", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["RealtimeDatabaseURL"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseZoneScheduler", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["FirebaseZoneScheduler"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "runOutsideAngular", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["runOutsideAngular"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseOptionsToken", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["FirebaseOptionsToken"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseNameOrConfigToken", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["FirebaseNameOrConfigToken"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseApp", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["FirebaseApp"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "_firebaseAppFactory", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["_firebaseAppFactory"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "AngularFireModule", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["AngularFireModule"]; });
+
+
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/public_api.js":
+/*!*************************************************!*\
+  !*** ./node_modules/angularfire2/public_api.js ***!
+  \*************************************************/
+/*! exports provided: RealtimeDatabaseURL, FirebaseZoneScheduler, runOutsideAngular, FirebaseOptionsToken, FirebaseNameOrConfigToken, FirebaseApp, _firebaseAppFactory, AngularFireModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _angularfire2__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./angularfire2 */ "./node_modules/angularfire2/angularfire2.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "RealtimeDatabaseURL", function() { return _angularfire2__WEBPACK_IMPORTED_MODULE_0__["RealtimeDatabaseURL"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseZoneScheduler", function() { return _angularfire2__WEBPACK_IMPORTED_MODULE_0__["FirebaseZoneScheduler"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "runOutsideAngular", function() { return _angularfire2__WEBPACK_IMPORTED_MODULE_0__["runOutsideAngular"]; });
+
+/* harmony import */ var _firebase_app_module__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./firebase.app.module */ "./node_modules/angularfire2/firebase.app.module.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseOptionsToken", function() { return _firebase_app_module__WEBPACK_IMPORTED_MODULE_1__["FirebaseOptionsToken"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseNameOrConfigToken", function() { return _firebase_app_module__WEBPACK_IMPORTED_MODULE_1__["FirebaseNameOrConfigToken"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "FirebaseApp", function() { return _firebase_app_module__WEBPACK_IMPORTED_MODULE_1__["FirebaseApp"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "_firebaseAppFactory", function() { return _firebase_app_module__WEBPACK_IMPORTED_MODULE_1__["_firebaseAppFactory"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "AngularFireModule", function() { return _firebase_app_module__WEBPACK_IMPORTED_MODULE_1__["AngularFireModule"]; });
+
+
+
+//# sourceMappingURL=public_api.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/storage/index.js":
+/*!****************************************************!*\
+  !*** ./node_modules/angularfire2/storage/index.js ***!
+  \****************************************************/
+/*! exports provided: createStorageRef, StorageBucket, AngularFireStorage, createUploadTask, fromTask, AngularFireStorageModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _public_api__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./public_api */ "./node_modules/angularfire2/storage/public_api.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createStorageRef", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["createStorageRef"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "StorageBucket", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["StorageBucket"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "AngularFireStorage", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["AngularFireStorage"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createUploadTask", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["createUploadTask"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "fromTask", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["fromTask"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "AngularFireStorageModule", function() { return _public_api__WEBPACK_IMPORTED_MODULE_0__["AngularFireStorageModule"]; });
+
+
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/storage/observable/fromTask.js":
+/*!******************************************************************!*\
+  !*** ./node_modules/angularfire2/storage/observable/fromTask.js ***!
+  \******************************************************************/
+/*! exports provided: fromTask */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fromTask", function() { return fromTask; });
+/* harmony import */ var rxjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! rxjs */ "./node_modules/rxjs/_esm5/index.js");
+
+function fromTask(task) {
+    return new rxjs__WEBPACK_IMPORTED_MODULE_0__["Observable"](function (subscriber) {
+        var progress = function (snap) { return subscriber.next(snap); };
+        var error = function (e) { return subscriber.error(e); };
+        var complete = function () { return subscriber.complete(); };
+        task.on('state_changed', progress, error, complete);
+        return function () { return task.cancel(); };
+    });
+}
+//# sourceMappingURL=fromTask.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/storage/public_api.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/angularfire2/storage/public_api.js ***!
+  \*********************************************************/
+/*! exports provided: createStorageRef, StorageBucket, AngularFireStorage, createUploadTask, fromTask, AngularFireStorageModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _ref__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./ref */ "./node_modules/angularfire2/storage/ref.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createStorageRef", function() { return _ref__WEBPACK_IMPORTED_MODULE_0__["createStorageRef"]; });
+
+/* harmony import */ var _storage__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./storage */ "./node_modules/angularfire2/storage/storage.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "StorageBucket", function() { return _storage__WEBPACK_IMPORTED_MODULE_1__["StorageBucket"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "AngularFireStorage", function() { return _storage__WEBPACK_IMPORTED_MODULE_1__["AngularFireStorage"]; });
+
+/* harmony import */ var _task__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./task */ "./node_modules/angularfire2/storage/task.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "createUploadTask", function() { return _task__WEBPACK_IMPORTED_MODULE_2__["createUploadTask"]; });
+
+/* harmony import */ var _observable_fromTask__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./observable/fromTask */ "./node_modules/angularfire2/storage/observable/fromTask.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "fromTask", function() { return _observable_fromTask__WEBPACK_IMPORTED_MODULE_3__["fromTask"]; });
+
+/* harmony import */ var _storage_module__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./storage.module */ "./node_modules/angularfire2/storage/storage.module.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "AngularFireStorageModule", function() { return _storage_module__WEBPACK_IMPORTED_MODULE_4__["AngularFireStorageModule"]; });
+
+
+
+
+
+
+//# sourceMappingURL=public_api.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/storage/ref.js":
+/*!**************************************************!*\
+  !*** ./node_modules/angularfire2/storage/ref.js ***!
+  \**************************************************/
+/*! exports provided: createStorageRef */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createStorageRef", function() { return createStorageRef; });
+/* harmony import */ var _task__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./task */ "./node_modules/angularfire2/storage/task.js");
+/* harmony import */ var rxjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! rxjs */ "./node_modules/rxjs/_esm5/index.js");
+
+
+function createStorageRef(ref, scheduler) {
+    return {
+        getDownloadURL: function () { return scheduler.keepUnstableUntilFirst(scheduler.runOutsideAngular(Object(rxjs__WEBPACK_IMPORTED_MODULE_1__["from"])(scheduler.zone.runOutsideAngular(function () { return ref.getDownloadURL(); })))); },
+        getMetadata: function () { return scheduler.keepUnstableUntilFirst(scheduler.runOutsideAngular(Object(rxjs__WEBPACK_IMPORTED_MODULE_1__["from"])(scheduler.zone.runOutsideAngular(function () { return ref.getMetadata(); })))); },
+        delete: function () { return Object(rxjs__WEBPACK_IMPORTED_MODULE_1__["from"])(ref.delete()); },
+        child: function (path) { return createStorageRef(ref.child(path), scheduler); },
+        updateMetatdata: function (meta) { return Object(rxjs__WEBPACK_IMPORTED_MODULE_1__["from"])(ref.updateMetadata(meta)); },
+        put: function (data, metadata) {
+            var task = ref.put(data, metadata);
+            return Object(_task__WEBPACK_IMPORTED_MODULE_0__["createUploadTask"])(task);
+        },
+        putString: function (data, format, metadata) {
+            var task = ref.putString(data, format, metadata);
+            return Object(_task__WEBPACK_IMPORTED_MODULE_0__["createUploadTask"])(task);
+        }
+    };
+}
+//# sourceMappingURL=ref.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/storage/storage.js":
+/*!******************************************************!*\
+  !*** ./node_modules/angularfire2/storage/storage.js ***!
+  \******************************************************/
+/*! exports provided: StorageBucket, AngularFireStorage */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "StorageBucket", function() { return StorageBucket; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AngularFireStorage", function() { return AngularFireStorage; });
+/* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
+/* harmony import */ var _ref__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ref */ "./node_modules/angularfire2/storage/ref.js");
+/* harmony import */ var angularfire2__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! angularfire2 */ "./node_modules/angularfire2/index.js");
+
+
+
+var StorageBucket = new _angular_core__WEBPACK_IMPORTED_MODULE_0__["InjectionToken"]('angularfire2.storageBucket');
+var AngularFireStorage = (function () {
+    function AngularFireStorage(options, nameOrConfig, storageBucket, platformId, zone) {
+        this.scheduler = new angularfire2__WEBPACK_IMPORTED_MODULE_2__["FirebaseZoneScheduler"](zone, platformId);
+        this.storage = zone.runOutsideAngular(function () {
+            var app = Object(angularfire2__WEBPACK_IMPORTED_MODULE_2__["_firebaseAppFactory"])(options, nameOrConfig);
+            return app.storage(storageBucket || undefined);
+        });
+    }
+    AngularFireStorage.prototype.ref = function (path) {
+        return Object(_ref__WEBPACK_IMPORTED_MODULE_1__["createStorageRef"])(this.storage.ref(path), this.scheduler);
+    };
+    AngularFireStorage.prototype.upload = function (path, data, metadata) {
+        var storageRef = this.storage.ref(path);
+        var ref = Object(_ref__WEBPACK_IMPORTED_MODULE_1__["createStorageRef"])(storageRef, this.scheduler);
+        return ref.put(data, metadata);
+    };
+    AngularFireStorage.decorators = [
+        { type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["Injectable"] },
+    ];
+    AngularFireStorage.ctorParameters = function () { return [
+        { type: undefined, decorators: [{ type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["Inject"], args: [angularfire2__WEBPACK_IMPORTED_MODULE_2__["FirebaseOptionsToken"],] }] },
+        { type: undefined, decorators: [{ type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["Optional"] }, { type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["Inject"], args: [angularfire2__WEBPACK_IMPORTED_MODULE_2__["FirebaseNameOrConfigToken"],] }] },
+        { type: String, decorators: [{ type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["Optional"] }, { type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["Inject"], args: [StorageBucket,] }] },
+        { type: Object, decorators: [{ type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["Inject"], args: [_angular_core__WEBPACK_IMPORTED_MODULE_0__["PLATFORM_ID"],] }] },
+        { type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["NgZone"] }
+    ]; };
+    return AngularFireStorage;
+}());
+
+//# sourceMappingURL=storage.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/storage/storage.module.js":
+/*!*************************************************************!*\
+  !*** ./node_modules/angularfire2/storage/storage.module.js ***!
+  \*************************************************************/
+/*! exports provided: AngularFireStorageModule */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AngularFireStorageModule", function() { return AngularFireStorageModule; });
+/* harmony import */ var _angular_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @angular/core */ "./node_modules/@angular/core/fesm5/core.js");
+/* harmony import */ var _storage__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./storage */ "./node_modules/angularfire2/storage/storage.js");
+/* harmony import */ var firebase_storage__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! firebase/storage */ "./node_modules/firebase/storage/dist/index.esm.js");
+
+
+
+var AngularFireStorageModule = (function () {
+    function AngularFireStorageModule() {
+    }
+    AngularFireStorageModule.decorators = [
+        { type: _angular_core__WEBPACK_IMPORTED_MODULE_0__["NgModule"], args: [{
+                    providers: [_storage__WEBPACK_IMPORTED_MODULE_1__["AngularFireStorage"]]
+                },] },
+    ];
+    return AngularFireStorageModule;
+}());
+
+//# sourceMappingURL=storage.module.js.map
+
+/***/ }),
+
+/***/ "./node_modules/angularfire2/storage/task.js":
+/*!***************************************************!*\
+  !*** ./node_modules/angularfire2/storage/task.js ***!
+  \***************************************************/
+/*! exports provided: createUploadTask */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createUploadTask", function() { return createUploadTask; });
+/* harmony import */ var _observable_fromTask__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./observable/fromTask */ "./node_modules/angularfire2/storage/observable/fromTask.js");
+/* harmony import */ var rxjs_operators__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! rxjs/operators */ "./node_modules/rxjs/_esm5/operators/index.js");
+
+
+function createUploadTask(task) {
+    var inner$ = Object(_observable_fromTask__WEBPACK_IMPORTED_MODULE_0__["fromTask"])(task);
+    return {
+        task: task,
+        then: task.then.bind(task),
+        catch: task.catch.bind(task),
+        pause: task.pause.bind(task),
+        cancel: task.cancel.bind(task),
+        resume: task.resume.bind(task),
+        snapshotChanges: function () { return inner$; },
+        percentageChanges: function () { return inner$.pipe(Object(rxjs_operators__WEBPACK_IMPORTED_MODULE_1__["map"])(function (s) { return s.bytesTransferred / s.totalBytes * 100; })); }
+    };
+}
+//# sourceMappingURL=task.js.map
+
+/***/ }),
+
+/***/ "./node_modules/firebase/app/dist/index.cjs.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/firebase/app/dist/index.cjs.js ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+__webpack_require__(/*! @firebase/polyfill */ "./node_modules/@firebase/polyfill/dist/index.esm.js");
+var firebase = _interopDefault(__webpack_require__(/*! @firebase/app */ "./node_modules/@firebase/app/dist/index.cjs.js"));
+
+/**
+ * Copyright 2018 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+module.exports = firebase;
+
+
+/***/ }),
+
+/***/ "./node_modules/firebase/storage/dist/index.esm.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/firebase/storage/dist/index.esm.js ***!
+  \*********************************************************/
+/*! no exports provided */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _firebase_storage__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @firebase/storage */ "./node_modules/@firebase/storage/dist/index.esm.js");
+
+
+/**
+ * Copyright 2017 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+/***/ }),
+
 /***/ "./node_modules/jquery/dist/jquery.js":
 /*!********************************************!*\
   !*** ./node_modules/jquery/dist/jquery.js ***!
@@ -89009,6 +96947,483 @@ function __importStar(mod) {
 function __importDefault(mod) {
     return (mod && mod.__esModule) ? mod : { default: mod };
 }
+
+
+/***/ }),
+
+/***/ "./node_modules/whatwg-fetch/fetch.js":
+/*!********************************************!*\
+  !*** ./node_modules/whatwg-fetch/fetch.js ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+(function(self) {
+  'use strict';
+
+  if (self.fetch) {
+    return
+  }
+
+  var support = {
+    searchParams: 'URLSearchParams' in self,
+    iterable: 'Symbol' in self && 'iterator' in Symbol,
+    blob: 'FileReader' in self && 'Blob' in self && (function() {
+      try {
+        new Blob()
+        return true
+      } catch(e) {
+        return false
+      }
+    })(),
+    formData: 'FormData' in self,
+    arrayBuffer: 'ArrayBuffer' in self
+  }
+
+  if (support.arrayBuffer) {
+    var viewClasses = [
+      '[object Int8Array]',
+      '[object Uint8Array]',
+      '[object Uint8ClampedArray]',
+      '[object Int16Array]',
+      '[object Uint16Array]',
+      '[object Int32Array]',
+      '[object Uint32Array]',
+      '[object Float32Array]',
+      '[object Float64Array]'
+    ]
+
+    var isDataView = function(obj) {
+      return obj && DataView.prototype.isPrototypeOf(obj)
+    }
+
+    var isArrayBufferView = ArrayBuffer.isView || function(obj) {
+      return obj && viewClasses.indexOf(Object.prototype.toString.call(obj)) > -1
+    }
+  }
+
+  function normalizeName(name) {
+    if (typeof name !== 'string') {
+      name = String(name)
+    }
+    if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(name)) {
+      throw new TypeError('Invalid character in header field name')
+    }
+    return name.toLowerCase()
+  }
+
+  function normalizeValue(value) {
+    if (typeof value !== 'string') {
+      value = String(value)
+    }
+    return value
+  }
+
+  // Build a destructive iterator for the value list
+  function iteratorFor(items) {
+    var iterator = {
+      next: function() {
+        var value = items.shift()
+        return {done: value === undefined, value: value}
+      }
+    }
+
+    if (support.iterable) {
+      iterator[Symbol.iterator] = function() {
+        return iterator
+      }
+    }
+
+    return iterator
+  }
+
+  function Headers(headers) {
+    this.map = {}
+
+    if (headers instanceof Headers) {
+      headers.forEach(function(value, name) {
+        this.append(name, value)
+      }, this)
+    } else if (Array.isArray(headers)) {
+      headers.forEach(function(header) {
+        this.append(header[0], header[1])
+      }, this)
+    } else if (headers) {
+      Object.getOwnPropertyNames(headers).forEach(function(name) {
+        this.append(name, headers[name])
+      }, this)
+    }
+  }
+
+  Headers.prototype.append = function(name, value) {
+    name = normalizeName(name)
+    value = normalizeValue(value)
+    var oldValue = this.map[name]
+    this.map[name] = oldValue ? oldValue+','+value : value
+  }
+
+  Headers.prototype['delete'] = function(name) {
+    delete this.map[normalizeName(name)]
+  }
+
+  Headers.prototype.get = function(name) {
+    name = normalizeName(name)
+    return this.has(name) ? this.map[name] : null
+  }
+
+  Headers.prototype.has = function(name) {
+    return this.map.hasOwnProperty(normalizeName(name))
+  }
+
+  Headers.prototype.set = function(name, value) {
+    this.map[normalizeName(name)] = normalizeValue(value)
+  }
+
+  Headers.prototype.forEach = function(callback, thisArg) {
+    for (var name in this.map) {
+      if (this.map.hasOwnProperty(name)) {
+        callback.call(thisArg, this.map[name], name, this)
+      }
+    }
+  }
+
+  Headers.prototype.keys = function() {
+    var items = []
+    this.forEach(function(value, name) { items.push(name) })
+    return iteratorFor(items)
+  }
+
+  Headers.prototype.values = function() {
+    var items = []
+    this.forEach(function(value) { items.push(value) })
+    return iteratorFor(items)
+  }
+
+  Headers.prototype.entries = function() {
+    var items = []
+    this.forEach(function(value, name) { items.push([name, value]) })
+    return iteratorFor(items)
+  }
+
+  if (support.iterable) {
+    Headers.prototype[Symbol.iterator] = Headers.prototype.entries
+  }
+
+  function consumed(body) {
+    if (body.bodyUsed) {
+      return Promise.reject(new TypeError('Already read'))
+    }
+    body.bodyUsed = true
+  }
+
+  function fileReaderReady(reader) {
+    return new Promise(function(resolve, reject) {
+      reader.onload = function() {
+        resolve(reader.result)
+      }
+      reader.onerror = function() {
+        reject(reader.error)
+      }
+    })
+  }
+
+  function readBlobAsArrayBuffer(blob) {
+    var reader = new FileReader()
+    var promise = fileReaderReady(reader)
+    reader.readAsArrayBuffer(blob)
+    return promise
+  }
+
+  function readBlobAsText(blob) {
+    var reader = new FileReader()
+    var promise = fileReaderReady(reader)
+    reader.readAsText(blob)
+    return promise
+  }
+
+  function readArrayBufferAsText(buf) {
+    var view = new Uint8Array(buf)
+    var chars = new Array(view.length)
+
+    for (var i = 0; i < view.length; i++) {
+      chars[i] = String.fromCharCode(view[i])
+    }
+    return chars.join('')
+  }
+
+  function bufferClone(buf) {
+    if (buf.slice) {
+      return buf.slice(0)
+    } else {
+      var view = new Uint8Array(buf.byteLength)
+      view.set(new Uint8Array(buf))
+      return view.buffer
+    }
+  }
+
+  function Body() {
+    this.bodyUsed = false
+
+    this._initBody = function(body) {
+      this._bodyInit = body
+      if (!body) {
+        this._bodyText = ''
+      } else if (typeof body === 'string') {
+        this._bodyText = body
+      } else if (support.blob && Blob.prototype.isPrototypeOf(body)) {
+        this._bodyBlob = body
+      } else if (support.formData && FormData.prototype.isPrototypeOf(body)) {
+        this._bodyFormData = body
+      } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+        this._bodyText = body.toString()
+      } else if (support.arrayBuffer && support.blob && isDataView(body)) {
+        this._bodyArrayBuffer = bufferClone(body.buffer)
+        // IE 10-11 can't handle a DataView body.
+        this._bodyInit = new Blob([this._bodyArrayBuffer])
+      } else if (support.arrayBuffer && (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body))) {
+        this._bodyArrayBuffer = bufferClone(body)
+      } else {
+        throw new Error('unsupported BodyInit type')
+      }
+
+      if (!this.headers.get('content-type')) {
+        if (typeof body === 'string') {
+          this.headers.set('content-type', 'text/plain;charset=UTF-8')
+        } else if (this._bodyBlob && this._bodyBlob.type) {
+          this.headers.set('content-type', this._bodyBlob.type)
+        } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+          this.headers.set('content-type', 'application/x-www-form-urlencoded;charset=UTF-8')
+        }
+      }
+    }
+
+    if (support.blob) {
+      this.blob = function() {
+        var rejected = consumed(this)
+        if (rejected) {
+          return rejected
+        }
+
+        if (this._bodyBlob) {
+          return Promise.resolve(this._bodyBlob)
+        } else if (this._bodyArrayBuffer) {
+          return Promise.resolve(new Blob([this._bodyArrayBuffer]))
+        } else if (this._bodyFormData) {
+          throw new Error('could not read FormData body as blob')
+        } else {
+          return Promise.resolve(new Blob([this._bodyText]))
+        }
+      }
+
+      this.arrayBuffer = function() {
+        if (this._bodyArrayBuffer) {
+          return consumed(this) || Promise.resolve(this._bodyArrayBuffer)
+        } else {
+          return this.blob().then(readBlobAsArrayBuffer)
+        }
+      }
+    }
+
+    this.text = function() {
+      var rejected = consumed(this)
+      if (rejected) {
+        return rejected
+      }
+
+      if (this._bodyBlob) {
+        return readBlobAsText(this._bodyBlob)
+      } else if (this._bodyArrayBuffer) {
+        return Promise.resolve(readArrayBufferAsText(this._bodyArrayBuffer))
+      } else if (this._bodyFormData) {
+        throw new Error('could not read FormData body as text')
+      } else {
+        return Promise.resolve(this._bodyText)
+      }
+    }
+
+    if (support.formData) {
+      this.formData = function() {
+        return this.text().then(decode)
+      }
+    }
+
+    this.json = function() {
+      return this.text().then(JSON.parse)
+    }
+
+    return this
+  }
+
+  // HTTP methods whose capitalization should be normalized
+  var methods = ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT']
+
+  function normalizeMethod(method) {
+    var upcased = method.toUpperCase()
+    return (methods.indexOf(upcased) > -1) ? upcased : method
+  }
+
+  function Request(input, options) {
+    options = options || {}
+    var body = options.body
+
+    if (input instanceof Request) {
+      if (input.bodyUsed) {
+        throw new TypeError('Already read')
+      }
+      this.url = input.url
+      this.credentials = input.credentials
+      if (!options.headers) {
+        this.headers = new Headers(input.headers)
+      }
+      this.method = input.method
+      this.mode = input.mode
+      if (!body && input._bodyInit != null) {
+        body = input._bodyInit
+        input.bodyUsed = true
+      }
+    } else {
+      this.url = String(input)
+    }
+
+    this.credentials = options.credentials || this.credentials || 'omit'
+    if (options.headers || !this.headers) {
+      this.headers = new Headers(options.headers)
+    }
+    this.method = normalizeMethod(options.method || this.method || 'GET')
+    this.mode = options.mode || this.mode || null
+    this.referrer = null
+
+    if ((this.method === 'GET' || this.method === 'HEAD') && body) {
+      throw new TypeError('Body not allowed for GET or HEAD requests')
+    }
+    this._initBody(body)
+  }
+
+  Request.prototype.clone = function() {
+    return new Request(this, { body: this._bodyInit })
+  }
+
+  function decode(body) {
+    var form = new FormData()
+    body.trim().split('&').forEach(function(bytes) {
+      if (bytes) {
+        var split = bytes.split('=')
+        var name = split.shift().replace(/\+/g, ' ')
+        var value = split.join('=').replace(/\+/g, ' ')
+        form.append(decodeURIComponent(name), decodeURIComponent(value))
+      }
+    })
+    return form
+  }
+
+  function parseHeaders(rawHeaders) {
+    var headers = new Headers()
+    // Replace instances of \r\n and \n followed by at least one space or horizontal tab with a space
+    // https://tools.ietf.org/html/rfc7230#section-3.2
+    var preProcessedHeaders = rawHeaders.replace(/\r?\n[\t ]+/g, ' ')
+    preProcessedHeaders.split(/\r?\n/).forEach(function(line) {
+      var parts = line.split(':')
+      var key = parts.shift().trim()
+      if (key) {
+        var value = parts.join(':').trim()
+        headers.append(key, value)
+      }
+    })
+    return headers
+  }
+
+  Body.call(Request.prototype)
+
+  function Response(bodyInit, options) {
+    if (!options) {
+      options = {}
+    }
+
+    this.type = 'default'
+    this.status = options.status === undefined ? 200 : options.status
+    this.ok = this.status >= 200 && this.status < 300
+    this.statusText = 'statusText' in options ? options.statusText : 'OK'
+    this.headers = new Headers(options.headers)
+    this.url = options.url || ''
+    this._initBody(bodyInit)
+  }
+
+  Body.call(Response.prototype)
+
+  Response.prototype.clone = function() {
+    return new Response(this._bodyInit, {
+      status: this.status,
+      statusText: this.statusText,
+      headers: new Headers(this.headers),
+      url: this.url
+    })
+  }
+
+  Response.error = function() {
+    var response = new Response(null, {status: 0, statusText: ''})
+    response.type = 'error'
+    return response
+  }
+
+  var redirectStatuses = [301, 302, 303, 307, 308]
+
+  Response.redirect = function(url, status) {
+    if (redirectStatuses.indexOf(status) === -1) {
+      throw new RangeError('Invalid status code')
+    }
+
+    return new Response(null, {status: status, headers: {location: url}})
+  }
+
+  self.Headers = Headers
+  self.Request = Request
+  self.Response = Response
+
+  self.fetch = function(input, init) {
+    return new Promise(function(resolve, reject) {
+      var request = new Request(input, init)
+      var xhr = new XMLHttpRequest()
+
+      xhr.onload = function() {
+        var options = {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers: parseHeaders(xhr.getAllResponseHeaders() || '')
+        }
+        options.url = 'responseURL' in xhr ? xhr.responseURL : options.headers.get('X-Request-URL')
+        var body = 'response' in xhr ? xhr.response : xhr.responseText
+        resolve(new Response(body, options))
+      }
+
+      xhr.onerror = function() {
+        reject(new TypeError('Network request failed'))
+      }
+
+      xhr.ontimeout = function() {
+        reject(new TypeError('Network request failed'))
+      }
+
+      xhr.open(request.method, request.url, true)
+
+      if (request.credentials === 'include') {
+        xhr.withCredentials = true
+      } else if (request.credentials === 'omit') {
+        xhr.withCredentials = false
+      }
+
+      if ('responseType' in xhr && support.blob) {
+        xhr.responseType = 'blob'
+      }
+
+      request.headers.forEach(function(value, name) {
+        xhr.setRequestHeader(name, value)
+      })
+
+      xhr.send(typeof request._bodyInit === 'undefined' ? null : request._bodyInit)
+    })
+  }
+  self.fetch.polyfill = true
+})(typeof self !== 'undefined' ? self : this);
 
 
 /***/ })

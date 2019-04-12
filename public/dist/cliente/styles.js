@@ -48,7 +48,7 @@ module.exports = "/*!\n * Bootstrap v3.3.7 (http://getbootstrap.com)\n * Copyrig
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "/* You can add global styles to this file, and also import other style files */\n"
+module.exports = "/* You can add global styles to this file, and also import other style files */\nbody{\n    background: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAAPCAYAAADphp8SAAAAHUlEQVQ4y2N4+vSpHgMUUMIehGDUa6NeG/UaXQAAvERV5wGBupEAAAAASUVORK5CYII=\")\n}"
 
 /***/ }),
 
@@ -580,8 +580,8 @@ if(false) {}
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(/*! C:\xampp\htdocs\cliente\src\styles.css */"./src/styles.css");
-module.exports = __webpack_require__(/*! C:\xampp\htdocs\cliente\node_modules\bootstrap\dist\css\bootstrap.min.css */"./node_modules/bootstrap/dist/css/bootstrap.min.css");
+__webpack_require__(/*! /home/mcx/Trabajo/Proyectos/MovieRest/public/cliente/src/styles.css */"./src/styles.css");
+module.exports = __webpack_require__(/*! /home/mcx/Trabajo/Proyectos/MovieRest/public/cliente/node_modules/bootstrap/dist/css/bootstrap.min.css */"./node_modules/bootstrap/dist/css/bootstrap.min.css");
 
 
 /***/ })
