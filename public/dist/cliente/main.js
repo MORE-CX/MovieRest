@@ -122,12 +122,12 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
 
 
 var config = {
-    apiKey: "AIzaSyDG8ZLwbJepb5vAFlj7EfEliFMOQwGloBc",
-    authDomain: "muvierest.firebaseapp.com",
-    databaseURL: "https://muvierest.firebaseio.com",
-    projectId: "muvierest",
-    storageBucket: "muvierest.appspot.com",
-    messagingSenderId: "600551442706"
+    apiKey: "AIzaSyD6csgV_wmcgfAEkOApVBgfjwJQt9pcs0E",
+    authDomain: "movierest-6adab.firebaseapp.com",
+    databaseURL: "https://movierest-6adab.firebaseio.com",
+    projectId: "movierest-6adab",
+    storageBucket: "movierest-6adab.appspot.com",
+    messagingSenderId: "477357740612"
 };
 var AppModule = /** @class */ (function () {
     function AppModule() {
